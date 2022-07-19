@@ -1,10 +1,13 @@
 package com.example.examplemod;
 
+import com.google.gson.JsonElement;
 import com.mojang.logging.LogUtils;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.commands.SummonCommand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -12,9 +15,15 @@ import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.behavior.InteractWith;
 import net.minecraft.world.entity.monster.Creeper;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.entity.EntityAccess;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientChatEvent;
@@ -140,16 +149,40 @@ public class ExampleMod
             LOGGER.info("Got interaction item '{}'", event.getItemStack().toString());
             Creeper creeper = new Creeper(EntityType.CREEPER, event.getWorld());
             creeper.setPos(event.getPlayer().getX(), event.getPlayer().getY(), event.getPlayer().getZ());
-            CompoundTag nbt = creeper.serializeNBT();
             Level world = event.getWorld();
+            CompoundTag nbt = creeper.serializeNBT();
             nbt.putBoolean("powered", true);
-            nbt.putString("CustomName", "edrique");
             creeper.deserializeNBT(nbt);
+            creeper.setNoAi(true);
             creeper.setCustomNameVisible(true);
-            // creeper.setCustomName(Component.Serializer.fromJson("edriquer"));
+            TextComponent name = new TextComponent("edrique");
+            creeper.setCustomName(name);
             // LightningBolt lb = new LightningBolt(EntityType.LIGHTNING_BOLT, world);
             // lb.setPos(event.getPlayer().getX(), event.getPlayer().getY(), event.getPlayer().getZ());
             world.addFreshEntity(creeper);
+
+            // add item to inventory
+            Item item = Items.TOTEM_OF_UNDYING;
+            ItemStack totem = new ItemStack(item, 1);
+            totem.setHoverName(name);
+
+            ItemStack sword = new ItemStack(Items.NETHERITE_HOE, 1);
+            sword.enchant(Enchantments.SHARPNESS, 5);
+            sword.setHoverName(name);
+            event.getPlayer().getInventory().add(totem);
+            event.getPlayer().getInventory().add(sword);
+
+            BlockPos bp = new BlockPos(event.getPlayer().getX(), event.getPlayer().getY(), event.getPlayer().getZ()+1);
+            world.setBlockAndUpdate(bp, Blocks.CHEST.defaultBlockState());
+            ChestBlockEntity cbe = new ChestBlockEntity(bp, Blocks.CHEST.defaultBlockState());
+            cbe.setCustomName(new TextComponent("pepechest"));
+            for (int slot = 0; slot < 5; slot++) {
+                Item iteme = Items.TOTEM_OF_UNDYING;
+                ItemStack toteme = new ItemStack(iteme, 1);
+                toteme.setHoverName(new TextComponent("hehe"));
+                cbe.setItem(slot, toteme);
+            }
+            world.setBlockEntity(cbe);
             // world.addFreshEntity(lb);
         }
     }
