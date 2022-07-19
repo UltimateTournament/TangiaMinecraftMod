@@ -5,6 +5,7 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.TextComponent;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.item.Item;
@@ -19,6 +20,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientChatEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
@@ -140,6 +142,7 @@ public class ExampleMod
             creeper.setCustomNameVisible(true);
             TextComponent name = new TextComponent("edrique");
             creeper.setCustomName(name);
+            creeper.addTag("test tag");
             // LightningBolt lb = new LightningBolt(EntityType.LIGHTNING_BOLT, world);
             // lb.setPos(event.getPlayer().getX(), event.getPlayer().getY(), event.getPlayer().getZ());
             world.addFreshEntity(creeper);
@@ -167,6 +170,13 @@ public class ExampleMod
             }
             world.setBlockEntity(cbe);
             // world.addFreshEntity(lb);
+        }
+
+        @SubscribeEvent
+        public static void onMobDrops(LivingDropsEvent event) {
+            LOGGER.info("------ GOT LIVING DROP EVENT");
+            Entity entity = event.getEntity();
+            LOGGER.info("GOT TAGS {}", entity.getTags());
         }
     }
 
