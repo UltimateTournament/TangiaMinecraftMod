@@ -7,15 +7,19 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.monster.Creeper;
+import net.minecraft.world.entity.monster.Ghast;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientChatEvent;
 import net.minecraftforge.common.MinecraftForge;
@@ -170,6 +174,29 @@ public class ExampleMod
             }
             world.setBlockEntity(cbe);
             // world.addFreshEntity(lb);
+
+            // spawn lightning where player is looking
+            // LightningBolt entityToSpawn = EntityType.LIGHTNING_BOLT.create(world);
+			// entityToSpawn.moveTo(Vec3.atBottomCenterOf(new BlockPos(
+			// 		event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
+			// 				ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getX(),
+			// 		event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
+			// 				ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getY(),
+			// 		event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
+			// 				ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getZ())));
+			// entityToSpawn.setVisualOnly(false);
+			// world.addFreshEntity(entityToSpawn);
+            
+            // spawn ghast where player is looking
+            Ghast entityToSpawn = EntityType.GHAST.create(world);
+			entityToSpawn.moveTo(Vec3.atBottomCenterOf(new BlockPos(
+					event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
+							ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getX(),
+					event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
+							ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getY(),
+					event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
+							ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getZ())));
+			world.addFreshEntity(entityToSpawn);
         }
 
         @SubscribeEvent
