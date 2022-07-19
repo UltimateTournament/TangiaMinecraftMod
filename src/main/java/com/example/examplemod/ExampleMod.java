@@ -1,11 +1,25 @@
 package com.example.examplemod;
 
 import com.mojang.logging.LogUtils;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.server.commands.SummonCommand;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.entity.EntityAccess;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.ClientChatEvent;
+import net.minecraftforge.client.event.InputEvent;
+import net.minecraftforge.client.event.ScreenEvent.KeyboardKeyPressedEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.event.entity.living.LivingSpawnEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
 import net.minecraftforge.fml.InterModComms;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -13,12 +27,15 @@ import net.minecraftforge.fml.event.lifecycle.InterModEnqueueEvent;
 import net.minecraftforge.fml.event.lifecycle.InterModProcessEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.network.PlayMessages.SpawnEntity;
+
 import org.slf4j.Logger;
 
+import java.time.chrono.MinguoEra;
 import java.util.stream.Collectors;
 
 // The value here should match an entry in the META-INF/mods.toml file
-@Mod("examplemod")
+@Mod("tangia")
 public class ExampleMod
 {
     // Directly reference a slf4j logger
@@ -76,6 +93,31 @@ public class ExampleMod
         {
             // Register a new block here
             LOGGER.info("HELLO from Register Block");
+        }
+    }
+
+
+    @Mod.EventBusSubscriber(modid = "tangia", bus = Bus.FORGE, value = Dist.CLIENT)
+    public class MyStaticClientOnlyEventHandler {
+        @SubscribeEvent
+        public static void onChatEvent(ClientChatEvent event) {
+            LOGGER.info("Got chat message '{}'", event.getMessage().toString());
+        }
+
+        @SubscribeEvent
+        public static void onKeyPressEvent(InputEvent.KeyInputEvent event) {
+            LOGGER.info("pressed '{} - {}'", event.getKey(), event.getAction());
+            if (event.getKey() == 71 && event.getAction() == 0) {
+                // pressed g
+                var instance = Minecraft.getInstance();
+                var x = instance.player.getX();
+                var y = instance.player.getY();
+                var z = instance.player.getZ();
+                LOGGER.info("spawning creeper at {}, {}, {}", x+1, y+1, z+1);
+
+                // var creeper = ;
+                // SpawnEntity()
+            }
         }
     }
 }
