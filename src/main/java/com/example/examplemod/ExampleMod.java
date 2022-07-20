@@ -7,6 +7,7 @@ import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -30,6 +31,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientChatEvent;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
@@ -42,10 +44,12 @@ import net.minecraftforge.fml.event.lifecycle.InterModEnqueueEvent;
 import net.minecraftforge.fml.event.lifecycle.InterModProcessEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.server.command.ConfigCommand;
 
 import org.slf4j.Logger;
 
 import java.util.Random;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 // The value here should match an entry in the META-INF/mods.toml file
@@ -209,6 +213,8 @@ public class ExampleMod
             // apply a status effect
             MobEffectInstance mei = new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100);
             event.getPlayer().addEffect(mei);
+
+            event.getPlayer().sendMessage(new TextComponent("personal message"), UUID.randomUUID());
         }
 
         @SubscribeEvent
@@ -259,6 +265,12 @@ public class ExampleMod
         }
     }
 
-    // Set the chest block, grab its block entity, fill its inventory
-    // Listen to the tick event, count the amount of ticks up to 10 minutes, when it reaches the amount, do what you want - how to get server side events without player interaction
+    @Mod.EventBusSubscriber(modid = "tangia")
+    public class ModEvents {
+        @SubscribeEvent
+        public static void onCommandsRegister(RegisterCommandsEvent event) {
+            new IntegrationCommand(event.getDispatcher());
+            ConfigCommand.register(event.getDispatcher());
+        }
+    }
 }
