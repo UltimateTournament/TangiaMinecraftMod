@@ -1,7 +1,10 @@
 package com.example.examplemod;
 
+import com.ibm.icu.text.IDNA.Info;
 import com.mojang.logging.LogUtils;
 
+import net.minecraft.client.gui.GuiComponent;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.TextComponent;
@@ -18,6 +21,7 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -204,6 +208,19 @@ public class ExampleMod
             LOGGER.info("------ GOT LIVING DROP EVENT");
             Entity entity = event.getEntity();
             LOGGER.info("GOT TAGS {}", entity.getTags());
+        }
+
+        @SubscribeEvent
+        public static void onLeverEvent(PlayerInteractEvent.RightClickBlock event) {
+            BlockPos bp = event.getPos();
+            BlockEntity b = event.getWorld().getBlockEntity(bp);
+            if (b instanceof ChestBlockEntity) {
+                ChestBlockEntity cbe = (ChestBlockEntity) b;
+                var textcomp = cbe.getCustomName();
+                if (textcomp != null) {
+                    LOGGER.info("INTERACTED WITH CHEST BLOCK - {}", textcomp.getString());
+                }
+            }
         }
     }
 
