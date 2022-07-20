@@ -14,6 +14,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LightningBolt;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Ghast;
 import net.minecraft.world.item.Item;
@@ -215,6 +216,12 @@ public class ExampleMod
             event.getPlayer().addEffect(mei);
 
             event.getPlayer().sendMessage(new TextComponent("personal message"), UUID.randomUUID());
+
+            // drop an item
+            ItemStack enchantedAxe = new ItemStack(Items.DIAMOND_AXE, 1);
+            enchantedAxe.enchant(Enchantments.UNBREAKING, 3);
+            ItemEntity itement = new ItemEntity(world, event.getPlayer().getX(), event.getPlayer().getY(), event.getPlayer().getZ(), enchantedAxe);
+            world.addFreshEntity(itement);
         }
 
         @SubscribeEvent
