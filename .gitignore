@@ -2,3 +2,6 @@ build
 bin
 .gradle
 .devcontainer
+run
+.idea
+
