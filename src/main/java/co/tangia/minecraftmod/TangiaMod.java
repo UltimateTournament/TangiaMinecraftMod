@@ -1,10 +1,13 @@
 package co.tangia.minecraftmod;
 
+import com.google.gson.Gson;
 import com.mojang.logging.LogUtils;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.TextComponent;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
@@ -15,6 +18,7 @@ import net.minecraft.world.entity.monster.Ghast;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
@@ -39,6 +43,7 @@ import net.minecraftforge.fml.event.lifecycle.InterModEnqueueEvent;
 import net.minecraftforge.fml.event.lifecycle.InterModProcessEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.server.command.ConfigCommand;
 
 import org.slf4j.Logger;
@@ -190,7 +195,8 @@ public class TangiaMod {
             // world.addFreshEntity(entityToSpawn);
 
             // spawn ghast where player is looking
-            Ghast entityToSpawn = EntityType.GHAST.create(world);
+            // Ghast entityToSpawn = EntityType.GHAST.create(world);
+            Entity entityToSpawn = ForgeRegistries.ENTITIES.getValue(new ResourceLocation("donkey")).create(world);
             entityToSpawn.moveTo(Vec3.atBottomCenterOf(new BlockPos(
                 event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
                     ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getX(),
@@ -200,6 +206,7 @@ public class TangiaMod {
                     ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getZ())));
             world.addFreshEntity(entityToSpawn);
 
+
             // apply a status effect
             MobEffectInstance mei = new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100);
             event.getPlayer().addEffect(mei);
@@ -207,10 +214,16 @@ public class TangiaMod {
             event.getPlayer().sendMessage(new TextComponent("personal message"), UUID.randomUUID());
 
             // drop an item
-            ItemStack enchantedAxe = new ItemStack(Items.DIAMOND_AXE, 1);
-            enchantedAxe.enchant(Enchantments.UNBREAKING, 3);
-            ItemEntity itement = new ItemEntity(world, event.getPlayer().getX(), event.getPlayer().getY(), event.getPlayer().getZ(), enchantedAxe);
+            ItemStack mossyblock = new ItemStack(ForgeRegistries.ITEMS.getValue(new ResourceLocation("minecraft:mossy_stone_brick_stairs")), 1);
+            mossyblock.enchant(ForgeRegistries.ENCHANTMENTS.getValue(new ResourceLocation("protection")), 3);
+            ItemEntity itement = new ItemEntity(world, event.getPlayer().getX(), event.getPlayer().getY(), event.getPlayer().getZ(), mossyblock);
             world.addFreshEntity(itement);
+
+            // String testobj = "{\"val\":\"hello\"}";
+
+            // Gson gson = new Gson();
+            // TestObj actualObj = gson.fromJson(testobj, TestObj.class);
+            // LOGGER.info("actual obj - {}", actualObj.toString());
         }
 
         @SubscribeEvent
