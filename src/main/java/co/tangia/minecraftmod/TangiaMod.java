@@ -1,19 +1,14 @@
-package com.example.examplemod;
+package co.tangia.minecraftmod;
 
-import com.ibm.icu.text.IDNA.Info;
 import com.mojang.logging.LogUtils;
 
-import net.minecraft.client.gui.GuiComponent;
-import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Ghast;
@@ -23,7 +18,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.AirBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -55,13 +49,11 @@ import java.util.stream.Collectors;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod("tangia")
-public class ExampleMod
-{
+public class TangiaMod {
     // Directly reference a slf4j logger
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public ExampleMod()
-    {
+    public TangiaMod() {
         // Register the setup method for modloading
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
         // Register the enqueueIMC method for modloading
@@ -73,31 +65,30 @@ public class ExampleMod
         MinecraftForge.EVENT_BUS.register(this);
     }
 
-    private void setup(final FMLCommonSetupEvent event)
-    {
+    private void setup(final FMLCommonSetupEvent event) {
         // some preinit code
         LOGGER.info("HELLO FROM PREINIT");
         LOGGER.info("DIRT BLOCK >> {}", Blocks.DIRT.getRegistryName());
     }
 
-    private void enqueueIMC(final InterModEnqueueEvent event)
-    {
+    private void enqueueIMC(final InterModEnqueueEvent event) {
         // Some example code to dispatch IMC to another mod
-        InterModComms.sendTo("examplemod", "helloworld", () -> { LOGGER.info("Hello world from the MDK"); return "Hello world";});
+        InterModComms.sendTo("examplemod", "helloworld", () -> {
+            LOGGER.info("Hello world from the MDK");
+            return "Hello world";
+        });
     }
 
-    private void processIMC(final InterModProcessEvent event)
-    {
+    private void processIMC(final InterModProcessEvent event) {
         // Some example code to receive and process InterModComms from other mods
         LOGGER.info("Got IMC {}", event.getIMCStream().
-                map(m->m.messageSupplier().get()).
-                collect(Collectors.toList()));
+            map(m -> m.messageSupplier().get()).
+            collect(Collectors.toList()));
     }
 
     // You can use SubscribeEvent and let the Event Bus discover methods to call
     @SubscribeEvent
-    public void onServerStarting(ServerStartingEvent event)
-    {
+    public void onServerStarting(ServerStartingEvent event) {
         // Do something when the server starts
         LOGGER.info("HELLO from server starting");
     }
@@ -105,11 +96,9 @@ public class ExampleMod
     // You can use EventBusSubscriber to automatically subscribe events on the contained class (this is subscribing to the MOD
     // Event bus for receiving Registry Events)
     @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD)
-    public static class RegistryEvents
-    {
+    public static class RegistryEvents {
         @SubscribeEvent
-        public static void onBlocksRegistry(final RegistryEvent.Register<Block> blockRegistryEvent)
-        {
+        public static void onBlocksRegistry(final RegistryEvent.Register<Block> blockRegistryEvent) {
             // Register a new block here
             LOGGER.info("HELLO from Register Block");
         }
@@ -117,10 +106,10 @@ public class ExampleMod
 
 
     @Mod.EventBusSubscriber(modid = "tangia", bus = Bus.FORGE, value = Dist.CLIENT)
-    public class MyStaticClientOnlyEventHandler {
+    public static class MyStaticClientOnlyEventHandler {
         @SubscribeEvent
         public static void onChatEvent(ClientChatEvent event) {
-            LOGGER.info("Got chat message '{}'", event.getMessage().toString());
+            LOGGER.info("Got chat message '{}'", event.getMessage());
         }
 
         // @SubscribeEvent
@@ -133,7 +122,7 @@ public class ExampleMod
         //         var y = instance.player.getY();
         //         var z = instance.player.getZ();
         //         Creeper creeper = new Creeper(EntityType.CREEPER, instance.level);
-                
+
         //         LOGGER.info("spawning creeper at {}, {}, {}", x+1, y+1, z+1);
 
         //         // var creeper = ;
@@ -141,14 +130,14 @@ public class ExampleMod
         //     }
         // }
     }
-    
-    
+
+
     @Mod.EventBusSubscriber(modid = "tangia", bus = Bus.FORGE)
-    public class MyStaticServerOnlyEventHandler {
+    public static class MyStaticServerOnlyEventHandler {
         @SubscribeEvent
         public static void onInteractEvent(PlayerInteractEvent.RightClickItem event) {
             LOGGER.info("Got interaction event '{}'", event.toString());
-            LOGGER.info("Got interaction item '{}'", event.getItemStack().toString());
+            LOGGER.info("Got interaction item '{}'", event.getItemStack());
             Creeper creeper = new Creeper(EntityType.CREEPER, event.getWorld());
             creeper.setPos(event.getPlayer().getX(), event.getPlayer().getY(), event.getPlayer().getZ());
             Level world = event.getWorld();
@@ -175,7 +164,7 @@ public class ExampleMod
             event.getPlayer().getInventory().add(totem);
             event.getPlayer().getInventory().add(sword);
 
-            BlockPos bp = new BlockPos(event.getPlayer().getX(), event.getPlayer().getY(), event.getPlayer().getZ()+1);
+            BlockPos bp = new BlockPos(event.getPlayer().getX(), event.getPlayer().getY(), event.getPlayer().getZ() + 1);
             world.setBlockAndUpdate(bp, Blocks.CHEST.defaultBlockState());
             ChestBlockEntity cbe = new ChestBlockEntity(bp, Blocks.CHEST.defaultBlockState());
             cbe.setCustomName(new TextComponent("pepechest"));
@@ -190,26 +179,26 @@ public class ExampleMod
 
             // spawn lightning where player is looking
             // LightningBolt entityToSpawn = EntityType.LIGHTNING_BOLT.create(world);
-			// entityToSpawn.moveTo(Vec3.atBottomCenterOf(new BlockPos(
-			// 		event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
-			// 				ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getX(),
-			// 		event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
-			// 				ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getY(),
-			// 		event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
-			// 				ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getZ())));
-			// entityToSpawn.setVisualOnly(false);
-			// world.addFreshEntity(entityToSpawn);
-            
+            // entityToSpawn.moveTo(Vec3.atBottomCenterOf(new BlockPos(
+            // 		event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
+            // 				ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getX(),
+            // 		event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
+            // 				ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getY(),
+            // 		event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
+            // 				ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getZ())));
+            // entityToSpawn.setVisualOnly(false);
+            // world.addFreshEntity(entityToSpawn);
+
             // spawn ghast where player is looking
             Ghast entityToSpawn = EntityType.GHAST.create(world);
-			entityToSpawn.moveTo(Vec3.atBottomCenterOf(new BlockPos(
-					event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
-							ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getX(),
-					event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
-							ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getY(),
-					event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
-							ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getZ())));
-			world.addFreshEntity(entityToSpawn);
+            entityToSpawn.moveTo(Vec3.atBottomCenterOf(new BlockPos(
+                event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
+                    ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getX(),
+                event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
+                    ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getY(),
+                event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
+                    ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getZ())));
+            world.addFreshEntity(entityToSpawn);
 
             // apply a status effect
             MobEffectInstance mei = new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100);
@@ -235,8 +224,7 @@ public class ExampleMod
         public static void onLeverEvent(PlayerInteractEvent.RightClickBlock event) {
             BlockPos bp = event.getPos();
             BlockEntity b = event.getWorld().getBlockEntity(bp);
-            if (b instanceof ChestBlockEntity) {
-                ChestBlockEntity cbe = (ChestBlockEntity) b;
+            if (b instanceof ChestBlockEntity cbe) {
                 var textcomp = cbe.getCustomName();
                 if (textcomp != null) {
                     String thestring = textcomp.getString();
@@ -252,11 +240,11 @@ public class ExampleMod
                             Level world = event.getWorld();
                             // Remove chest from position
                             // world.removeBlockEntity(bp); // makes an empty default chest for some reason
-                            world.setBlock(bp, Blocks.AIR.defaultBlockState(), Blocks.AIR.getId(Blocks.AIR.defaultBlockState())); // breaks the chest
+                            world.setBlock(bp, Blocks.AIR.defaultBlockState(), Block.getId(Blocks.AIR.defaultBlockState())); // breaks the chest
 
                             // Spawn creeper
                             Creeper creeper = new Creeper(EntityType.CREEPER, event.getWorld());
-                            creeper.setPos(event.getPos().getX(), event.getPos().getY()+2, event.getPos().getZ());
+                            creeper.setPos(event.getPos().getX(), event.getPos().getY() + 2, event.getPos().getZ());
                             // CompoundTag nbt = creeper.serializeNBT();
                             // nbt.putBoolean("powered", true);
                             // creeper.deserializeNBT(nbt);
@@ -273,7 +261,7 @@ public class ExampleMod
     }
 
     @Mod.EventBusSubscriber(modid = "tangia")
-    public class ModEvents {
+    public static class ModEvents {
         @SubscribeEvent
         public static void onCommandsRegister(RegisterCommandsEvent event) {
             new IntegrationCommand(event.getDispatcher());
