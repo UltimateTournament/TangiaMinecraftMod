@@ -216,6 +216,7 @@ public class TangiaMod {
             MobEffectInstance mei = new MobEffectInstance(ForgeRegistries.MOB_EFFECTS.getValue(new ResourceLocation("strength")), 200);
             // MobEffectInstance mei = new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100);
             event.getPlayer().addEffect(mei);
+            // event.getPlayer().getName().getContents();
 
             event.getPlayer().sendMessage(new TextComponent("personal message"), UUID.randomUUID());
 
