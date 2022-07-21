@@ -1,8 +1,10 @@
 package co.tangia.minecraftmod;
 
 import com.google.gson.Gson;
+import co.tangia.sdk.TangiaSDK;
 import com.mojang.logging.LogUtils;
-
+import dev.failsafe.RetryPolicy;
+import dev.failsafe.RetryPolicyBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
@@ -34,22 +36,26 @@ import net.minecraftforge.client.event.ClientChatEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
 import net.minecraftforge.fml.InterModComms;
+import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.InterModEnqueueEvent;
 import net.minecraftforge.fml.event.lifecycle.InterModProcessEvent;
-import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.server.command.ConfigCommand;
-
 import org.slf4j.Logger;
+import retrofit2.Response;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -59,6 +65,7 @@ import java.util.stream.Collectors;
 public class TangiaMod {
     // Directly reference a slf4j logger
     private static final Logger LOGGER = LogUtils.getLogger();
+    private final Map<Integer, TangiaSDK> playerSDKs = new HashMap<>();
 
     public TangiaMod() {
         // Register the setup method for modloading
@@ -70,6 +77,8 @@ public class TangiaMod {
 
         // Register ourselves for server and other game events we are interested in
         MinecraftForge.EVENT_BUS.register(this);
+        LoginCommand.mod = this;
+        RetryPolicy<Response<Object>> retryPolicy = RetryPolicy.ofDefaults();
     }
 
     private void setup(final FMLCommonSetupEvent event) {
@@ -98,6 +107,38 @@ public class TangiaMod {
     public void onServerStarting(ServerStartingEvent event) {
         // Do something when the server starts
         LOGGER.info("HELLO from server starting");
+    }
+
+    public void login(int id, String code) {
+        var sdk = new TangiaSDK(System.getenv("TANGIA_GAME_ID"), "0.0.1", "STAGING".equals(System.getenv("TANGIA_ENV")) ? TangiaSDK.STAGING_URL : TangiaSDK.PROD_URL);
+        try {
+            sdk.login(code);
+        } catch (Exception e) {
+            LOGGER.warn("failed to login: " + e.getMessage());
+            return;
+        }
+        synchronized (playerSDKs) {
+            if (playerSDKs.get(id) != null)
+                playerSDKs.get(id).stopEventPolling();
+            playerSDKs.put(id, sdk);
+        }
+        //TODO figure out when to stop
+        sdk.startEventPolling();
+    }
+
+    @SubscribeEvent
+    public void onTick(TickEvent.WorldTickEvent event) {
+        if (event.side != LogicalSide.SERVER)
+            return;
+        for (var sdkEntry : playerSDKs.entrySet()) {
+            var sdk = sdkEntry.getValue();
+            if (sdk == null)
+                continue;
+            var interaction = sdk.popEventQueue();
+            if (interaction == null)
+                continue;
+            LOGGER.info("Got event '{}' for '{}'", interaction.InteractionID, sdkEntry.getKey());
+        }
     }
 
     // You can use EventBusSubscriber to automatically subscribe events on the contained class (this is subscribing to the MOD
@@ -284,7 +325,7 @@ public class TangiaMod {
     public static class ModEvents {
         @SubscribeEvent
         public static void onCommandsRegister(RegisterCommandsEvent event) {
-            new IntegrationCommand(event.getDispatcher());
+            LoginCommand.register(event.getDispatcher());
             ConfigCommand.register(event.getDispatcher());
         }
     }
