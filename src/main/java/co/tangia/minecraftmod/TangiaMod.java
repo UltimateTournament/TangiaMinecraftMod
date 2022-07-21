@@ -226,11 +226,11 @@ public class TangiaMod {
             ItemEntity itement = new ItemEntity(world, event.getPlayer().getX(), event.getPlayer().getY(), event.getPlayer().getZ(), mossyblock);
             world.addFreshEntity(itement);
 
-            // String testobj = "{\"val\":\"hello\"}";
+            String testobj = "{\"chestName\":\"hello\",\"items\":[{\"itemID\":\"hey\"}]}";
 
-            // Gson gson = new Gson();
-            // TestObj actualObj = gson.fromJson(testobj, TestObj.class);
-            // LOGGER.info("actual obj - {}", actualObj.toString());
+            Gson gson = new Gson();
+            ChestComponent actualObj = gson.fromJson(testobj, ChestComponent.class);
+            LOGGER.info("actual obj - {}", gson.toJson(actualObj));
         }
 
         @SubscribeEvent
