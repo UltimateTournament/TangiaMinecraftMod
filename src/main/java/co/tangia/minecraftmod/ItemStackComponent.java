@@ -10,6 +10,7 @@ public class ItemStackComponent {
   public int stackSize;
   public EnchantmentComponent[] enchantments;
   public String hoverName;
+  public Boolean drop;
 
   public ItemStack getItemStack() {
     ItemStack is = new ItemStack(ForgeRegistries.ITEMS.getValue(new ResourceLocation(this.itemID)), this.stackSize);
