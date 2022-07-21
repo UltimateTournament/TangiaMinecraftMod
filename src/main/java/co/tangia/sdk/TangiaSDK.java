@@ -1,7 +1,9 @@
 package co.tangia.sdk;
 
+import com.mojang.logging.LogUtils;
 import dev.failsafe.RetryPolicy;
 import dev.failsafe.retrofit.FailsafeCall;
+import org.slf4j.Logger;
 import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.Retrofit;
@@ -10,28 +12,33 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.SynchronousQueue;
-import java.util.logging.Logger;
 
 public class TangiaSDK {
+    public static final String PROD_URL = "https://api.tangia.co/";
+    public static final String STAGING_URL = "https://tangia.staging.ultimatearcade.io/";
+
     private String sessionKey;
-    private final String gameVersion;
     private EventPoller eventPoller = new EventPoller();
+    private final String gameID;
+    private final String gameVersion;
     private final SynchronousQueue<InteractionEvent> events = new SynchronousQueue<>();
     private final Set<String> handledEventIds = new HashSet<>();
     private final TangiaApi api;
-    private static final Logger logger = Logger.getLogger(TangiaSDK.class.getName());
 
-    public TangiaSDK(String gameVersion) {
-        this(gameVersion, "https://api.tangia.co/");
+    private static final Logger LOGGER = LogUtils.getLogger();
+
+    public TangiaSDK(String gameID, String gameVersion) {
+        this(gameID, gameVersion, PROD_URL);
     }
 
-    public TangiaSDK(String gameVersion, String baseUrl) {
+    public TangiaSDK(String gameID, String gameVersion, String baseUrl) {
+        this.gameID = gameID;
         this.gameVersion = gameVersion;
         this.api = createApi(baseUrl);
     }
 
-    public void login(String gameToken, String creatorCode) throws IOException, InvalidLoginException {
-        var call = api.login(new GameLoginReq(gameToken, creatorCode));
+    public void login(String creatorCode) throws IOException, InvalidLoginException {
+        var call = api.login(new GameLoginReq(gameID, creatorCode));
         var res = execWithRetries(call);
         if (!res.isSuccessful() || res.body() == null)
             throw new InvalidLoginException();
@@ -91,15 +98,15 @@ public class TangiaSDK {
                     pollEvents();
                 }
             } catch (InterruptedException ex) {
-                logger.warning("got interrupted, will stop event polling");
+                LOGGER.warn("got interrupted, will stop event polling");
             }
             var stopCall = api.notifyStopPlaying(sessionKey);
             try {
                 Response<Void> stopResp = execWithRetries(stopCall);
                 if (!stopResp.isSuccessful())
-                    logger.warning("couldn't notify stop playing");
+                    LOGGER.warn("couldn't notify stop playing");
             } catch (IOException e) {
-                logger.warning("couldn't notify stop playing: " + e.getMessage());
+                LOGGER.warn("couldn't notify stop playing: " + e.getMessage());
             }
         }
 
@@ -109,10 +116,10 @@ public class TangiaSDK {
             try {
                 eventsResp = execWithRetries(eventsCall);
             } catch (IOException e) {
-                logger.warning("error when polling events: " + e.getMessage());
+                LOGGER.warn("error when polling events: " + e.getMessage());
             }
             if (eventsResp == null || eventsResp.body() == null || !eventsResp.isSuccessful()) {
-                logger.warning("couldn't get events");
+                LOGGER.warn("couldn't get events");
                 Thread.sleep(100);
                 return;
             }
