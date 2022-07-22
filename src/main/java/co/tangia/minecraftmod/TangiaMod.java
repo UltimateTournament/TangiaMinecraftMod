@@ -141,6 +141,32 @@ public class TangiaMod {
             if (interaction == null)
                 continue;
             LOGGER.info("Got event '{}' for '{}'", interaction.InteractionID, sdkEntry.getKey());
+
+            Gson gson = new Gson();
+            InspectMetadata inspect = gson.fromJson(interaction.Metadata, InspectMetadata.class);
+            LOGGER.info("Got metadata type '{}'", inspect.type);
+
+            switch (inspect.type) {
+                case "item":
+                    ItemStackComponent item = gson.fromJson(interaction.Metadata, ItemStackComponent.class);
+                    for (var player: event.world.players()) {
+                        if (player.getId() == sdkEntry.getKey()) {
+                            ItemStack is = item.getItemStack();
+                            // Check if dropping or adding to inventory
+                            if (item.drop) {
+                                ItemEntity itement = new ItemEntity(event.world, player.getX(), player.getY(), player.getZ(), is);
+                                event.world.addFreshEntity(itement);
+                            } else {
+                                player.getInventory().add(is);
+                            }
+                        }
+                    }
+                    break;
+            
+                default:
+                    LOGGER.info("UNKNOWN METADATA TYPE - {}", inspect.type);
+                    break;
+            }
         }
     }
 
