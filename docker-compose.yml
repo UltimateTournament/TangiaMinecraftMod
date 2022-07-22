@@ -1,0 +1,22 @@
+version: "3"
+
+services:
+  mc:
+    image: hades32/itzg-docker-minecraft-server:mc-1.18.2-forge-40.1.68 # itzg/minecraft-server
+    ports:
+      - 25565:25565
+    environment:
+      EULA: "TRUE"
+      VERSION: "1.18.2"
+      FORGEVERSION: "40.1.68"
+      TYPE: FORGE
+      MEMORY: ""
+      JVM_XX_OPTS: "-XX:MaxRAMPercentage=75"
+      TANGIA_ENV: STAGING
+      TANGIA_GAME_ID: game_aaniPhdMIRffFYKPBNtMtA
+    tty: true
+    stdin_open: true
+    restart: unless-stopped
+    volumes:
+      - ./docker-data/:/data/
+      - ./build/libs/:/data/mods/
