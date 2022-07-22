@@ -11,6 +11,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Set;
 import java.util.concurrent.SynchronousQueue;
 
@@ -23,6 +24,7 @@ public class TangiaSDK {
     private final String gameID;
     private final String gameVersion;
     private final SynchronousQueue<InteractionEvent> eventQueue = new SynchronousQueue<>();
+    private final SynchronousQueue<EventResult> eventAckQueue = new SynchronousQueue<>();
     private final Set<String> handledEventIds = new HashSet<>();
     private final TangiaApi api;
 
@@ -64,6 +66,14 @@ public class TangiaSDK {
         Response<Void> res = execWithRetries(call);
         if (!res.isSuccessful())
             throw new InvalidRequestException();
+    }
+
+    public void ackEventAsync(EventResult e) {
+        try {
+            eventAckQueue.put(e);
+        } catch (InterruptedException ex) {
+            LOGGER.warn("interrupted when ack-ing");
+        }
     }
 
     public String getSessionKey() {
@@ -113,6 +123,20 @@ public class TangiaSDK {
         }
 
         private void pollEvents() throws InterruptedException {
+            var acks = new LinkedList<EventResult>();
+            while (true) {
+                var ack = eventAckQueue.poll();
+                if (ack == null)
+                    break;
+                acks.add(ack);
+            }
+            if (acks.size() > 0) {
+                try {
+                    ackEvents(acks.toArray(new EventResult[0]));
+                } catch (Exception e) {
+                    LOGGER.warn("couldn't ack events: " + e);
+                }
+            }
             var eventsCall = api.pollEvents(sessionKey, new InteractionEventsReq(gameVersion));
             Response<InteractionEventsResp> eventsResp = null;
             try {

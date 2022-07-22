@@ -3,6 +3,7 @@ package co.tangia.minecraftmod;
 import com.google.gson.Gson;
 import co.tangia.minecraftmod.chatcommands.LoginCommand;
 import co.tangia.minecraftmod.chatcommands.LogoutCommand;
+import co.tangia.sdk.EventResult;
 import co.tangia.sdk.InvalidLoginException;
 import co.tangia.sdk.TangiaSDK;
 import com.mojang.logging.LogUtils;
@@ -189,6 +190,8 @@ public class TangiaMod {
                     LOGGER.info("UNKNOWN METADATA TYPE - {}", inspect.type);
                     break;
             }
+            //TODO do something
+            sdk.ackEventAsync(new EventResult(interaction.EventID, true, null));
         }
     }
 
