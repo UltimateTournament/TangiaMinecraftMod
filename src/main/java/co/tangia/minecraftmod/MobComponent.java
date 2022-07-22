@@ -17,7 +17,6 @@ public class MobComponent {
   public Map<String, Integer> nbtInts;
   public String customName;
   public Boolean noAI;
-  public SoundComponent[] sounds;
 
   public Mob getMob(Level level) {
     Entity entity = ForgeRegistries.ENTITIES.getValue(new ResourceLocation(this.entityID)).create(level);

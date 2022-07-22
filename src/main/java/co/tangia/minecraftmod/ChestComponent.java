@@ -10,7 +10,7 @@ public class ChestComponent {
   public String chestName;
   public ItemStackComponent[] items;
 
-  public ChestBlockEntity setBlockEntity(Level level, float x, float y, float z) {
+  public ChestBlockEntity setBlockEntity(Level level, double x, double y, double z) {
     BlockPos bp = new BlockPos(x, y, z);
     level.setBlockAndUpdate(bp, Blocks.CHEST.defaultBlockState());
     ChestBlockEntity cbe = new ChestBlockEntity(bp, Blocks.CHEST.defaultBlockState());
