@@ -22,20 +22,26 @@ public class MobComponent {
     Entity entity = ForgeRegistries.ENTITIES.getValue(new ResourceLocation(this.entityID)).create(level);
     if (entity instanceof Mob mob) {
       // Apply nbts
-      for(Map.Entry<String,String> entry: this.nbtStrings.entrySet()) {
-        CompoundTag nbt = mob.serializeNBT();
-        nbt.putString(entry.getKey(), entry.getValue());
-        mob.deserializeNBT(nbt);
+      if (this.nbtStrings != null) {
+        for(Map.Entry<String,String> entry: this.nbtStrings.entrySet()) {
+          CompoundTag nbt = mob.serializeNBT();
+          nbt.putString(entry.getKey(), entry.getValue());
+          mob.deserializeNBT(nbt);
+        }
       }
-      for(Map.Entry<String,Boolean> entry: this.nbtBools.entrySet()) {
-        CompoundTag nbt = mob.serializeNBT();
-        nbt.putBoolean(entry.getKey(), entry.getValue());
-        mob.deserializeNBT(nbt);
+      if (this.nbtBools != null) {
+        for(Map.Entry<String,Boolean> entry: this.nbtBools.entrySet()) {
+          CompoundTag nbt = mob.serializeNBT();
+          nbt.putBoolean(entry.getKey(), entry.getValue());
+          mob.deserializeNBT(nbt);
+        }
       }
-      for(Map.Entry<String, Integer> entry: this.nbtInts.entrySet()) {
-        CompoundTag nbt = mob.serializeNBT();
-        nbt.putInt(entry.getKey(), entry.getValue());
-        mob.deserializeNBT(nbt);
+      if (this.nbtInts != null) {
+        for(Map.Entry<String, Integer> entry: this.nbtInts.entrySet()) {
+          CompoundTag nbt = mob.serializeNBT();
+          nbt.putInt(entry.getKey(), entry.getValue());
+          mob.deserializeNBT(nbt);
+        }
       }
   
       if (this.customName != null && this.customName != "") {
