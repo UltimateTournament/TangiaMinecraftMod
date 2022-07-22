@@ -1,7 +1,8 @@
-build
+/build/
 bin
 .gradle
 .devcontainer
 run
 .idea
 
+/docker-data/

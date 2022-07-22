@@ -1,10 +1,12 @@
 package co.tangia.minecraftmod;
 
 import com.google.gson.Gson;
+import co.tangia.minecraftmod.chatcommands.LoginCommand;
+import co.tangia.minecraftmod.chatcommands.LogoutCommand;
+import co.tangia.sdk.InvalidLoginException;
 import co.tangia.sdk.TangiaSDK;
 import com.mojang.logging.LogUtils;
 import dev.failsafe.RetryPolicy;
-import dev.failsafe.RetryPolicyBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
@@ -20,6 +22,7 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Ghast;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -39,6 +42,7 @@ import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -55,6 +59,7 @@ import net.minecraftforge.server.command.ConfigCommand;
 import org.slf4j.Logger;
 import retrofit2.Response;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -80,7 +85,6 @@ public class TangiaMod {
 
         // Register ourselves for server and other game events we are interested in
         MinecraftForge.EVENT_BUS.register(this);
-        LoginCommand.mod = this;
         RetryPolicy<Response<Object>> retryPolicy = RetryPolicy.ofDefaults();
     }
 
@@ -112,21 +116,39 @@ public class TangiaMod {
         LOGGER.info("HELLO from server starting");
     }
 
-    public void login(int id, String code) {
-        var sdk = new TangiaSDK(System.getenv("TANGIA_GAME_ID"), "0.0.1", "STAGING".equals(System.getenv("TANGIA_ENV")) ? TangiaSDK.STAGING_URL : TangiaSDK.PROD_URL);
-        try {
-            sdk.login(code);
-        } catch (Exception e) {
-            LOGGER.warn("failed to login: " + e.getMessage());
-            return;
+    @SubscribeEvent
+    public void onCommandsRegister(RegisterCommandsEvent event) {
+        new LoginCommand(this).register(event.getDispatcher());
+        new LogoutCommand(this).register(event.getDispatcher());
+        ConfigCommand.register(event.getDispatcher());
+    }
+
+    public void login(Player player, String code) throws InvalidLoginException, IOException {
+        var gameId = System.getenv("TANGIA_GAME_ID");
+        if (gameId == null) {
+            LOGGER.warn("TANGIA_GAME_ID not set");
+            throw new InvalidLoginException();
         }
+        var id = player.getId();
+        var sdk = new TangiaSDK(gameId, "0.0.1", "STAGING".equals(System.getenv("TANGIA_ENV")) ? TangiaSDK.STAGING_URL : TangiaSDK.PROD_URL);
+        sdk.login(code);
         synchronized (playerSDKs) {
             if (playerSDKs.get(id) != null)
                 playerSDKs.get(id).stopEventPolling();
             playerSDKs.put(id, sdk);
         }
-        //TODO figure out when to stop
         sdk.startEventPolling();
+    }
+
+    public void logout(Player player) {
+        synchronized (playerSDKs) {
+            var id = player.getId();
+            var sdk = playerSDKs.get(id);
+            if (sdk != null) {
+                sdk.stopEventPolling();
+                playerSDKs.remove(id);
+            }
+        }
     }
 
     @SubscribeEvent
@@ -168,6 +190,12 @@ public class TangiaMod {
                     break;
             }
         }
+    }
+
+    @SubscribeEvent
+    public void onPlayerLeave(PlayerEvent.PlayerLoggedOutEvent event) {
+        // TODO figure out if we get a stable identity for players so we can keep their session when they come back
+        logout(event.getPlayer());
     }
 
     // You can use EventBusSubscriber to automatically subscribe events on the contained class (this is subscribing to the MOD
@@ -363,12 +391,4 @@ public class TangiaMod {
         }
     }
 
-    @Mod.EventBusSubscriber(modid = "tangia")
-    public static class ModEvents {
-        @SubscribeEvent
-        public static void onCommandsRegister(RegisterCommandsEvent event) {
-            LoginCommand.register(event.getDispatcher());
-            ConfigCommand.register(event.getDispatcher());
-        }
-    }
 }

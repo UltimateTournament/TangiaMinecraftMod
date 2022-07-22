@@ -241,6 +241,15 @@ shadowJar {
 //    archiveFileName = jar.archiveFileName
 }
 
+task deleteNonShadow(type: Delete) {
+    delete fileTree('build/libs') {
+        include '*-slim.jar'
+    }
+}
+
+deleteNonShadow.dependsOn shadowJar
+build.dependsOn deleteNonShadow
+
 import com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation
 
 task relocateShadowJar(type: ConfigureShadowRelocation) {

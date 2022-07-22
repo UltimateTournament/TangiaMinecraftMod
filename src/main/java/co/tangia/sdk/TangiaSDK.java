@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -21,7 +22,7 @@ public class TangiaSDK {
     private EventPoller eventPoller = new EventPoller();
     private final String gameID;
     private final String gameVersion;
-    private final SynchronousQueue<InteractionEvent> events = new SynchronousQueue<>();
+    private final SynchronousQueue<InteractionEvent> eventQueue = new SynchronousQueue<>();
     private final Set<String> handledEventIds = new HashSet<>();
     private final TangiaApi api;
 
@@ -55,7 +56,7 @@ public class TangiaSDK {
     }
 
     public InteractionEvent popEventQueue() {
-        return events.poll();
+        return eventQueue.poll();
     }
 
     public void ackEvents(EventResult[] results) throws IOException, InvalidRequestException {
@@ -82,6 +83,7 @@ public class TangiaSDK {
     private static TangiaApi createApi(String baseUrl) {
         Retrofit retrofit = new Retrofit.Builder()
             .baseUrl(baseUrl)
+            .addConverterFactory(GsonConverterFactory.create())
             .build();
 
         return retrofit.create(TangiaApi.class);
@@ -118,17 +120,23 @@ public class TangiaSDK {
             } catch (IOException e) {
                 LOGGER.warn("error when polling events: " + e.getMessage());
             }
-            if (eventsResp == null || eventsResp.body() == null || !eventsResp.isSuccessful()) {
+            if (eventsResp == null || !eventsResp.isSuccessful()) {
                 LOGGER.warn("couldn't get events");
-                Thread.sleep(100);
+                Thread.sleep(200);
                 return;
             }
-            for (InteractionEvent e : eventsResp.body().Events) {
+            var body = eventsResp.body();
+            if (body == null || body.Events == null || body.Events.length == 0) {
+                LOGGER.debug("no events");
+                Thread.sleep(50);
+                return;
+            }
+            for (InteractionEvent e : body.Events) {
                 // we'll receive events until they get ack'ed/rejected
                 if (handledEventIds.contains(e.EventID))
                     continue;
                 handledEventIds.add(e.EventID);
-                events.put(e);
+                eventQueue.put(e);
             }
         }
 
