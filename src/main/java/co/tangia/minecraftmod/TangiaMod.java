@@ -1,3 +1,4 @@
+
 package co.tangia.minecraftmod;
 
 import com.google.gson.Gson;
@@ -168,89 +169,105 @@ public class TangiaMod {
             Gson gson = new Gson();
             InspectMetadata inspect = gson.fromJson(interaction.Metadata, InspectMetadata.class);
             
-            for (var item: inspect.items) {
-                for (var player: event.world.players()) {
-                    if (player.getId() == sdkEntry.getKey()) {
-                        ItemStack is = item.getItemStack();
-                        // Check if dropping or adding to inventory
-                        if (item.drop != null && item.drop) {
-                            ItemEntity itement = new ItemEntity(event.world, player.getX(), player.getY(), player.getZ(), is);
-                            event.world.addFreshEntity(itement);
-                        } else {
-                            player.getInventory().add(is);
-                        }
-                    }
-                }
-            }
-            for (var chest: inspect.chests) {
-                for (var player: event.world.players()) {
-                    if (player.getId() == sdkEntry.getKey()) {
-                        // Spawn the chest at the player
-                        chest.setBlockEntity(event.world, player.getX(), player.getY(), player.getZ());
-                    }
-                }
-            }
-            for (var command: inspect.commands) {
-                for (var player: event.world.players()) {
-                    if (player.getId() == sdkEntry.getKey()) {
-                        // Run the command
-                        event.world.getServer().getCommands().performCommand(player.createCommandSourceStack().withSuppressedOutput().withPermission(4), command.getMessage(player.getName().getContents(), interaction.BuyerName));
-                    }
-                }
-            }
-            for (var chest: inspect.chests) {
-                for (var player: event.world.players()) {
-                    if (player.getId() == sdkEntry.getKey()) {
-                        // Spawn the chest at the player
-                        chest.setBlockEntity(event.world, player.getX(), player.getY(), player.getZ());
-                    }
-                }
-            }
-            for (var message: inspect.messages) {
-                if (message.toAllPlayers != null && message.toAllPlayers) {
+            if (inspect.items != null) {
+                for (var item: inspect.items) {
                     for (var player: event.world.players()) {
-                        player.sendMessage(new TextComponent(message.message), UUID.randomUUID());
-                    }
-
-                }
-                for (var player: event.world.players()) {
-                    if (player.getId() == sdkEntry.getKey()) {
-                        // Spawn the chest at the player
-                        player.sendMessage(new TextComponent(message.message), UUID.randomUUID());
-                    }
-                }
-            }
-            for (var mobComponent: inspect.mobs) {
-                for (var player: event.world.players()) {
-                    if (player.getId() == sdkEntry.getKey()) {
-                        Mob mob = mobComponent.getMob(event.world);
-                        mob.setPos(player.getX(), player.getY(), player.getZ());
-                        event.world.addFreshEntity(mob);
-                    }
-                }
-            }
-            for (var soundComponent: inspect.sounds) {
-                for (var player: event.world.players()) {
-                    if (player.getId() == sdkEntry.getKey()) {
-                        BlockPos bp = new BlockPos(player.getX(), player.getY(), player.getZ());
-                        if (soundComponent.delaySeconds != null && soundComponent.delaySeconds > 0) {
-                            ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(1);
-                            exec.schedule(new Runnable() {
-                            public void run() {
-                                event.world.playSound(player, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(soundComponent.soundID)), SoundSource.PLAYERS, 1f, 1f);
-                            }  
-                            }, 1, TimeUnit.SECONDS);
-                        } else {
-                            event.world.playSound(player, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(soundComponent.soundID)), SoundSource.PLAYERS, 1f, 1f);
+                        if (player.getId() == sdkEntry.getKey()) {
+                            ItemStack is = item.getItemStack();
+                            // Check if dropping or adding to inventory
+                            if (item.drop != null && item.drop) {
+                                ItemEntity itement = new ItemEntity(event.world, player.getX(), player.getY(), player.getZ(), is);
+                                event.world.addFreshEntity(itement);
+                            } else {
+                                player.getInventory().add(is);
+                            }
                         }
                     }
                 }
             }
-            for (var statusComponent: inspect.statuses) {
-                for (var player: event.world.players()) {
-                    if (player.getId() == sdkEntry.getKey()) {
-                        MobEffectInstance mei = new MobEffectInstance(ForgeRegistries.MOB_EFFECTS.getValue(new ResourceLocation(statusComponent.statusID)), statusComponent.tickDuration);
-                        player.addEffect(mei);
+            if (inspect.chests != null) {
+                for (var chest: inspect.chests) {
+                    for (var player: event.world.players()) {
+                        if (player.getId() == sdkEntry.getKey()) {
+                            // Spawn the chest at the player
+                            chest.setBlockEntity(event.world, player.getX(), player.getY(), player.getZ());
+                        }
+                    }
+                }
+            }
+            if (inspect.commands != null) {
+                for (var command: inspect.commands) {
+                    for (var player: event.world.players()) {
+                        if (player.getId() == sdkEntry.getKey()) {
+                            // Run the command
+                            event.world.getServer().getCommands().performCommand(player.createCommandSourceStack().withSuppressedOutput().withPermission(4), command.getMessage(player.getName().getContents(), interaction.BuyerName));
+                        }
+                    }
+                }
+            }
+            if (inspect.chests != null) {
+                for (var chest: inspect.chests) {
+                    for (var player: event.world.players()) {
+                        if (player.getId() == sdkEntry.getKey()) {
+                            // Spawn the chest at the player
+                            chest.setBlockEntity(event.world, player.getX(), player.getY(), player.getZ());
+                        }
+                    }
+                }
+            }
+            if (inspect.messages != null) {
+                for (var message: inspect.messages) {
+                    if (message.toAllPlayers != null && message.toAllPlayers) {
+                        for (var player: event.world.players()) {
+                            player.sendMessage(new TextComponent(message.message), UUID.randomUUID());
+                        }
+    
+                    }
+                    for (var player: event.world.players()) {
+                        if (player.getId() == sdkEntry.getKey()) {
+                            // Spawn the chest at the player
+                            player.sendMessage(new TextComponent(message.message), UUID.randomUUID());
+                        }
+                    }
+                }
+            }
+            if (inspect.mobs != null) {
+                for (var mobComponent: inspect.mobs) {
+                    for (var player: event.world.players()) {
+                        if (player.getId() == sdkEntry.getKey()) {
+                            Mob mob = mobComponent.getMob(event.world);
+                            mob.setPos(player.getX(), player.getY(), player.getZ());
+                            event.world.addFreshEntity(mob);
+                        }
+                    }
+                }
+            }
+            if (inspect.sounds != null) {
+                for (var soundComponent: inspect.sounds) {
+                    for (var player: event.world.players()) {
+                        if (player.getId() == sdkEntry.getKey()) {
+                            BlockPos bp = new BlockPos(player.getX(), player.getY(), player.getZ());
+                            if (soundComponent.delaySeconds != null && soundComponent.delaySeconds > 0) {
+                                ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(1);
+                                exec.schedule(new Runnable() {
+                                public void run() {
+                                    event.world.playSound(player, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(soundComponent.soundID)), SoundSource.PLAYERS, 1f, 1f);
+                                }  
+                                }, 1, TimeUnit.SECONDS);
+                            } else {
+                                event.world.playSound(player, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(soundComponent.soundID)), SoundSource.PLAYERS, 1f, 1f);
+                            }
+                        }
+                    }
+                }
+            }
+            if (inspect.statuses != null) {
+                for (var statusComponent: inspect.statuses) {
+                    for (var player: event.world.players()) {
+                        if (player.getId() == sdkEntry.getKey()) {
+                            MobEffectInstance mei = new MobEffectInstance(ForgeRegistries.MOB_EFFECTS.getValue(new ResourceLocation(statusComponent.statusID)), statusComponent.tickDuration);
+                            player.addEffect(mei);
+                        }
                     }
                 }
             }
