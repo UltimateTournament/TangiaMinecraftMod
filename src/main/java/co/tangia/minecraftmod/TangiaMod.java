@@ -185,16 +185,6 @@ public class TangiaMod {
                     }
                 }
             }
-            if (inspect.chests != null) {
-                for (var chest: inspect.chests) {
-                    for (var player: event.world.players()) {
-                        if (player.getId() == sdkEntry.getKey()) {
-                            // Spawn the chest at the player
-                            chest.setBlockEntity(event.world, player.getX(), player.getY(), player.getZ());
-                        }
-                    }
-                }
-            }
             if (inspect.commands != null) {
                 for (var command: inspect.commands) {
                     for (var player: event.world.players()) {
@@ -210,7 +200,7 @@ public class TangiaMod {
                     for (var player: event.world.players()) {
                         if (player.getId() == sdkEntry.getKey()) {
                             // Spawn the chest at the player
-                            chest.setBlockEntity(event.world, player.getX(), player.getY(), player.getZ());
+                            chest.setBlockEntity(event.world, player.getX(), player.getY(), player.getZ(), interaction.BuyerName);
                         }
                     }
                 }
@@ -235,7 +225,7 @@ public class TangiaMod {
                 for (var mobComponent: inspect.mobs) {
                     for (var player: event.world.players()) {
                         if (player.getId() == sdkEntry.getKey()) {
-                            Mob mob = mobComponent.getMob(event.world);
+                            Mob mob = mobComponent.getMob(event.world, interaction.BuyerName);
                             mob.setPos(player.getX(), player.getY(), player.getZ());
                             event.world.addFreshEntity(mob);
                         }

@@ -18,7 +18,7 @@ public class MobComponent {
   public String customName;
   public Boolean noAI;
 
-  public Mob getMob(Level level) {
+  public Mob getMob(Level level, String displayName) {
     Entity entity = ForgeRegistries.ENTITIES.getValue(new ResourceLocation(this.entityID)).create(level);
     if (entity instanceof Mob mob) {
       // Apply nbts
@@ -46,7 +46,11 @@ public class MobComponent {
   
       if (this.customName != null && this.customName != "") {
         mob.setCustomNameVisible(true);
-        mob.setCustomName(new TextComponent(this.customName));
+        if (displayName != null) {
+          mob.setCustomName(new TextComponent(this.customName.replaceAll("$DISPLAYNAME", displayName)));
+        } else {
+          mob.setCustomName(new TextComponent(this.customName));
+        }
       }
   
       if (this.noAI != null && this.noAI) {

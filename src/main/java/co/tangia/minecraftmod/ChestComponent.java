@@ -10,12 +10,16 @@ public class ChestComponent {
   public String chestName;
   public ItemStackComponent[] items;
 
-  public ChestBlockEntity setBlockEntity(Level level, double x, double y, double z) {
+  public ChestBlockEntity setBlockEntity(Level level, double x, double y, double z, String displayName) {
     BlockPos bp = new BlockPos(x, y, z);
     level.setBlockAndUpdate(bp, Blocks.CHEST.defaultBlockState());
     ChestBlockEntity cbe = new ChestBlockEntity(bp, Blocks.CHEST.defaultBlockState());
     if (this.chestName != null) {
-      cbe.setCustomName(new TextComponent(this.chestName));
+      if (displayName != null) {
+        cbe.setCustomName(new TextComponent(this.chestName.replaceAll("$DISPLAYNAME", displayName)));
+      } else {
+        cbe.setCustomName(new TextComponent(this.chestName));
+      }
     }
     if (this.items != null) {
       for (int i = 0; i < this.items.length; i++) {
