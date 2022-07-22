@@ -3,6 +3,7 @@ package co.tangia.minecraftmod;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraftforge.registries.ForgeRegistries;
 
 public class ItemStackComponent {
@@ -16,7 +17,10 @@ public class ItemStackComponent {
     ItemStack is = new ItemStack(ForgeRegistries.ITEMS.getValue(new ResourceLocation(this.itemID)), this.stackSize);
     if (this.enchantments != null) {
       for (int i = 0; i < this.enchantments.length; i++) {
-        is.enchant(this.enchantments[i].getEnchantment(), this.enchantments[i].level);
+        Enchantment ench = this.enchantments[i].getEnchantment();
+        if (ench != null) {
+          is.enchant(ench, this.enchantments[i].level);
+        }
       }
     }
     if (this.hoverName != null && displayName != null) {

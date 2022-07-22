@@ -5,10 +5,14 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraftforge.registries.ForgeRegistries;
 
 public class EnchantmentComponent {
-  public String enchantentID;
+  public String enchantmentID;
   public int level;
 
   public Enchantment getEnchantment() {
-    return ForgeRegistries.ENCHANTMENTS.getValue(new ResourceLocation(this.enchantentID));
+    if (this.enchantmentID != null) {
+      return ForgeRegistries.ENCHANTMENTS.getValue(new ResourceLocation(this.enchantmentID));
+    } else {
+      return null;
+    }
   }
 }
