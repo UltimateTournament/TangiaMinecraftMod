@@ -14,8 +14,10 @@ public class ItemStackComponent {
 
   public ItemStack getItemStack() {
     ItemStack is = new ItemStack(ForgeRegistries.ITEMS.getValue(new ResourceLocation(this.itemID)), this.stackSize);
-    for (int i = 0; i < this.enchantments.length; i++) {
-      is.enchant(this.enchantments[i].getEnchantment(), this.enchantments[i].level);
+    if (this.enchantments != null) {
+      for (int i = 0; i < this.enchantments.length; i++) {
+        is.enchant(this.enchantments[i].getEnchantment(), this.enchantments[i].level);
+      }
     }
     is.setHoverName(new TextComponent(this.hoverName));
     return is;
