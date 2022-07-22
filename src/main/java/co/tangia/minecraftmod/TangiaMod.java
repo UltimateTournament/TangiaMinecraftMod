@@ -1,5 +1,6 @@
 package co.tangia.minecraftmod;
 
+import co.tangia.sdk.InvalidLoginException;
 import co.tangia.sdk.TangiaSDK;
 import com.mojang.logging.LogUtils;
 import dev.failsafe.RetryPolicy;
@@ -47,6 +48,7 @@ import net.minecraftforge.server.command.ConfigCommand;
 import org.slf4j.Logger;
 import retrofit2.Response;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -102,14 +104,14 @@ public class TangiaMod {
         LOGGER.info("HELLO from server starting");
     }
 
-    public void login(int id, String code) {
-        var sdk = new TangiaSDK(System.getenv("TANGIA_GAME_ID"), "0.0.1", "STAGING".equals(System.getenv("TANGIA_ENV")) ? TangiaSDK.STAGING_URL : TangiaSDK.PROD_URL);
-        try {
-            sdk.login(code);
-        } catch (Exception e) {
-            LOGGER.warn("failed to login: " + e.getMessage());
-            return;
+    public void login(int id, String code) throws InvalidLoginException, IOException {
+        var gameId = System.getenv("TANGIA_GAME_ID");
+        if (gameId == null) {
+            LOGGER.warn("TANGIA_GAME_ID not set");
+            throw new InvalidLoginException();
         }
+        var sdk = new TangiaSDK(gameId, "0.0.1", "STAGING".equals(System.getenv("TANGIA_ENV")) ? TangiaSDK.STAGING_URL : TangiaSDK.PROD_URL);
+        sdk.login(code);
         synchronized (playerSDKs) {
             if (playerSDKs.get(id) != null)
                 playerSDKs.get(id).stopEventPolling();
