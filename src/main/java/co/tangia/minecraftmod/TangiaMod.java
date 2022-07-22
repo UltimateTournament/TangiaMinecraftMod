@@ -43,6 +43,7 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
@@ -154,6 +155,13 @@ public class TangiaMod {
     }
 
     @SubscribeEvent
+    public void onJoin(EntityJoinWorldEvent event) {
+        if (event.getEntity() instanceof Player player) {
+            LOGGER.info("Player with ID {} joined", player.getId());
+        }
+    }
+
+    @SubscribeEvent
     public void onTick(TickEvent.WorldTickEvent event) {
         if (event.side != LogicalSide.SERVER)
             return;
@@ -164,7 +172,7 @@ public class TangiaMod {
             var interaction = sdk.popEventQueue();
             if (interaction == null)
                 continue;
-            LOGGER.info("Got event '{}' for '{}'", interaction.InteractionID, sdkEntry.getKey());
+            LOGGER.info("Got event '{}' for '{}' with metadata '{}'", interaction.InteractionID, sdkEntry.getKey(), interaction.Metadata);
 
             Gson gson = new Gson();
             InspectMetadata inspect = gson.fromJson(interaction.Metadata, InspectMetadata.class);
@@ -207,11 +215,11 @@ public class TangiaMod {
             }
             if (inspect.messages != null) {
                 for (var message: inspect.messages) {
+                    message.message = message.message.replaceAll("\\$DISPLAYNAME", interaction.BuyerName);
                     if (message.toAllPlayers != null && message.toAllPlayers) {
                         for (var player: event.world.players()) {
                             player.sendMessage(new TextComponent(message.message), UUID.randomUUID());
                         }
-    
                     }
                     for (var player: event.world.players()) {
                         if (player.getId() == sdkEntry.getKey()) {
@@ -222,9 +230,11 @@ public class TangiaMod {
                 }
             }
             if (inspect.mobs != null) {
+                LOGGER.info("Spawning {} mobs", inspect.mobs.length);
                 for (var mobComponent: inspect.mobs) {
                     for (var player: event.world.players()) {
                         if (player.getId() == sdkEntry.getKey()) {
+                            LOGGER.info("SPAWNING mob with id {}", mobComponent.entityID);
                             Mob mob = mobComponent.getMob(event.world, interaction.BuyerName);
                             mob.setPos(player.getX(), player.getY(), player.getZ());
                             event.world.addFreshEntity(mob);
@@ -236,16 +246,16 @@ public class TangiaMod {
                 for (var soundComponent: inspect.sounds) {
                     for (var player: event.world.players()) {
                         if (player.getId() == sdkEntry.getKey()) {
-                            BlockPos bp = new BlockPos(player.getX(), player.getY(), player.getZ());
+                            BlockPos bp = new BlockPos(player.getX(), player.getY()+1, player.getZ());
                             if (soundComponent.delaySeconds != null && soundComponent.delaySeconds > 0) {
                                 ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(1);
                                 exec.schedule(new Runnable() {
                                 public void run() {
-                                    event.world.playSound(player, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(soundComponent.soundID)), SoundSource.PLAYERS, 1f, 1f);
+                                    event.world.playSound(null, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(soundComponent.soundID)), SoundSource.AMBIENT, 1f, 1f);
                                 }  
                                 }, 1, TimeUnit.SECONDS);
                             } else {
-                                event.world.playSound(player, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(soundComponent.soundID)), SoundSource.PLAYERS, 1f, 1f);
+                                event.world.playSound(null, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(soundComponent.soundID)), SoundSource.AMBIENT, 1f, 1f);
                             }
                         }
                     }
