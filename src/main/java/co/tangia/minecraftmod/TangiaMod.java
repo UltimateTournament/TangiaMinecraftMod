@@ -175,7 +175,7 @@ public class TangiaMod {
                         if (player.getId() == sdkEntry.getKey()) {
                             ItemStack is = item.getItemStack();
                             // Check if dropping or adding to inventory
-                            if (item.drop) {
+                            if (item.drop != null && item.drop) {
                                 ItemEntity itement = new ItemEntity(event.world, player.getX(), player.getY(), player.getZ(), is);
                                 event.world.addFreshEntity(itement);
                             } else {
