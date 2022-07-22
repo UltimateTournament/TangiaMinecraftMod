@@ -47,7 +47,7 @@ public class MobComponent {
       if (this.customName != null && this.customName != "") {
         mob.setCustomNameVisible(true);
         if (displayName != null) {
-          mob.setCustomName(new TextComponent(this.customName.replaceAll("$DISPLAYNAME", displayName)));
+          mob.setCustomName(new TextComponent(this.customName.replaceAll("\\$DISPLAYNAME", displayName)));
         } else {
           mob.setCustomName(new TextComponent(this.customName));
         }

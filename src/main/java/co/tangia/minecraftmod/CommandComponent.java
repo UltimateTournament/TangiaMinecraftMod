@@ -4,6 +4,6 @@ public class CommandComponent {
   public String command;
 
   public String getMessage(String playerName, String displayName) {
-    return this.command.replaceAll("$DISPLAYNAME", displayName).replaceAll("$PLAYERNAME", playerName);
+    return this.command.replaceAll("\\$DISPLAYNAME", displayName).replaceAll("\\$PLAYERNAME", playerName);
   }
 }

@@ -24,7 +24,7 @@ public class ItemStackComponent {
       }
     }
     if (this.hoverName != null && displayName != null) {
-      is.setHoverName(new TextComponent(this.hoverName.replaceAll("$DISPLAYNAME", displayName)));
+      is.setHoverName(new TextComponent(this.hoverName.replaceAll("\\$DISPLAYNAME", displayName)));
     } else if (this.hoverName != null) {
       is.setHoverName(new TextComponent(this.hoverName));
     }

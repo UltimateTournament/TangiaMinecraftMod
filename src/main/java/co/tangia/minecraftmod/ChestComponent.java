@@ -16,7 +16,7 @@ public class ChestComponent {
     ChestBlockEntity cbe = new ChestBlockEntity(bp, Blocks.CHEST.defaultBlockState());
     if (this.chestName != null) {
       if (displayName != null) {
-        cbe.setCustomName(new TextComponent(this.chestName.replaceAll("$DISPLAYNAME", displayName)));
+        cbe.setCustomName(new TextComponent(this.chestName.replaceAll("\\$DISPLAYNAME", displayName)));
       } else {
         cbe.setCustomName(new TextComponent(this.chestName));
       }
