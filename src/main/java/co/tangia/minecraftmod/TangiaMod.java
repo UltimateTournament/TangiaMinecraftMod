@@ -10,11 +10,14 @@ import co.tangia.sdk.TangiaSDK;
 import com.mojang.logging.LogUtils;
 import dev.failsafe.RetryPolicy;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.NonNullList;
 import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -25,6 +28,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Ghast;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ShulkerBoxMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -36,6 +40,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientChatEvent;
@@ -176,7 +181,7 @@ public class TangiaMod {
 
             Gson gson = new Gson();
             InspectMetadata inspect = gson.fromJson(interaction.Metadata, InspectMetadata.class);
-            
+
             if (inspect.items != null) {
                 for (var item: inspect.items) {
                     for (var player: event.world.players()) {
@@ -190,6 +195,21 @@ public class TangiaMod {
                                 player.getInventory().add(is);
                             }
                         }
+                        // DEBUG SHULKER
+                        ItemStack shulk = new ItemStack(Items.SHULKER_BOX, 1);
+                        NonNullList<ItemStack> shulkerItems = NonNullList.withSize(27, ItemStack.EMPTY);
+                        CompoundTag shulkNbt = new CompoundTag();
+                        CompoundTag shulkItems = new CompoundTag();
+                        ItemStack axe = new ItemStack(Items.NETHERITE_AXE, 1);
+                        axe.enchant(Enchantments.SHARPNESS, 5);
+                        shulkerItems.set(1, axe);
+                        ContainerHelper.saveAllItems(shulkItems, shulkerItems);
+                        shulkNbt.put("BlockEntityTag", shulkItems);
+                        CompoundTag displayTag = new CompoundTag();
+                        displayTag.putString("Name", Component.Serializer.toJson(new TextComponent("yeye")));
+                        shulkNbt.put("display", displayTag);
+                        shulk.setTag(shulkNbt);
+                        player.getInventory().add(shulk);
                     }
                 }
             }
@@ -349,6 +369,7 @@ public class TangiaMod {
 
             // add item to inventory
             Item item = Items.TOTEM_OF_UNDYING;
+
             ItemStack totem = new ItemStack(item, 1);
             totem.setHoverName(name);
 
@@ -444,6 +465,13 @@ public class TangiaMod {
         public static void onLeverEvent(PlayerInteractEvent.RightClickBlock event) {
             BlockPos bp = event.getPos();
             BlockEntity b = event.getWorld().getBlockEntity(bp);
+            if (b instanceof ShulkerBoxBlockEntity sbe) {
+                var textcomp = sbe.getCustomName();
+                if (textcomp != null) {
+                    String thestring = textcomp.getString();
+                    LOGGER.info("INTERACTED WITH SHULKER BLOCK - '{}'", thestring);
+                }
+            }
             if (b instanceof ChestBlockEntity cbe) {
                 var textcomp = cbe.getCustomName();
                 if (textcomp != null) {
