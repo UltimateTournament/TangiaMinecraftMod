@@ -2,6 +2,7 @@ package co.tangia.minecraftmod;
 
 import co.tangia.minecraftmod.chatcommands.LoginCommand;
 import co.tangia.minecraftmod.chatcommands.LogoutCommand;
+import co.tangia.sdk.EventResult;
 import co.tangia.sdk.InvalidLoginException;
 import co.tangia.sdk.TangiaSDK;
 import com.mojang.logging.LogUtils;
@@ -153,6 +154,8 @@ public class TangiaMod {
             if (interaction == null)
                 continue;
             LOGGER.info("Got event '{}' for '{}'", interaction.InteractionID, sdkEntry.getKey());
+            //TODO do something
+            sdk.ackEventAsync(new EventResult(interaction.EventID, true, null));
         }
     }
 
