@@ -173,7 +173,7 @@ public class TangiaMod {
                 for (var item: inspect.items) {
                     for (var player: event.world.players()) {
                         if (player.getId() == sdkEntry.getKey()) {
-                            ItemStack is = item.getItemStack();
+                            ItemStack is = item.getItemStack(interaction.BuyerName);
                             // Check if dropping or adding to inventory
                             if (item.drop != null && item.drop) {
                                 ItemEntity itement = new ItemEntity(event.world, player.getX(), player.getY(), player.getZ(), is);

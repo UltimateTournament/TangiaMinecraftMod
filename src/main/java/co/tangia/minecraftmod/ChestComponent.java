@@ -19,7 +19,7 @@ public class ChestComponent {
     }
     if (this.items != null) {
       for (int i = 0; i < this.items.length; i++) {
-          cbe.setItem(i, this.items[i].getItemStack());
+          cbe.setItem(i, this.items[i].getItemStack(null));
       }
     }
     level.setBlockEntity(cbe);
