@@ -318,6 +318,10 @@ public class TangiaMod {
         public static void onInteractEvent(PlayerInteractEvent.RightClickItem event) {
             LOGGER.info("Got interaction event '{}'", event.toString());
             LOGGER.info("Got interaction item '{}'", event.getItemStack());
+            var gameId = System.getenv("DEBUG");
+            if (gameId == null) {
+                return;
+            }
             Creeper creeper = new Creeper(EntityType.CREEPER, event.getWorld());
             creeper.setPos(event.getPlayer().getX(), event.getPlayer().getY(), event.getPlayer().getZ());
             Level world = event.getWorld();
