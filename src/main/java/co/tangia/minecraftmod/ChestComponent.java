@@ -17,8 +17,10 @@ public class ChestComponent {
     if (this.chestName != null) {
       cbe.setCustomName(new TextComponent(this.chestName));
     }
-    for (int i = 0; i < this.items.length; i++) {
-        cbe.setItem(i, this.items[i].getItemStack());
+    if (this.items != null) {
+      for (int i = 0; i < this.items.length; i++) {
+          cbe.setItem(i, this.items[i].getItemStack());
+      }
     }
     level.setBlockEntity(cbe);
     return cbe;
