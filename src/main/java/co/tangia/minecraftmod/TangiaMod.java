@@ -1,5 +1,7 @@
+
 package co.tangia.minecraftmod;
 
+import com.google.gson.Gson;
 import co.tangia.minecraftmod.chatcommands.LoginCommand;
 import co.tangia.minecraftmod.chatcommands.LogoutCommand;
 import co.tangia.sdk.EventResult;
@@ -8,12 +10,17 @@ import co.tangia.sdk.TangiaSDK;
 import com.mojang.logging.LogUtils;
 import dev.failsafe.RetryPolicy;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.TextComponent;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Ghast;
@@ -21,6 +28,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
@@ -35,6 +43,7 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
@@ -48,6 +57,7 @@ import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.InterModEnqueueEvent;
 import net.minecraftforge.fml.event.lifecycle.InterModProcessEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.server.command.ConfigCommand;
 import org.slf4j.Logger;
 import retrofit2.Response;
@@ -57,6 +67,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 // The value here should match an entry in the META-INF/mods.toml file
@@ -143,6 +155,13 @@ public class TangiaMod {
     }
 
     @SubscribeEvent
+    public void onJoin(EntityJoinWorldEvent event) {
+        if (event.getEntity() instanceof Player player) {
+            LOGGER.info("Player with ID {} joined", player.getId());
+        }
+    }
+
+    @SubscribeEvent
     public void onTick(TickEvent.WorldTickEvent event) {
         if (event.side != LogicalSide.SERVER)
             return;
@@ -153,8 +172,107 @@ public class TangiaMod {
             var interaction = sdk.popEventQueue();
             if (interaction == null)
                 continue;
-            LOGGER.info("Got event '{}' for '{}'", interaction.InteractionID, sdkEntry.getKey());
-            //TODO do something
+            LOGGER.info("Got event '{}' for '{}' with metadata '{}'", interaction.InteractionID, sdkEntry.getKey(), interaction.Metadata);
+
+            Gson gson = new Gson();
+            InspectMetadata inspect = gson.fromJson(interaction.Metadata, InspectMetadata.class);
+            
+            if (inspect.items != null) {
+                for (var item: inspect.items) {
+                    for (var player: event.world.players()) {
+                        if (player.getId() == sdkEntry.getKey()) {
+                            ItemStack is = item.getItemStack(interaction.BuyerName);
+                            // Check if dropping or adding to inventory
+                            if (item.drop != null && item.drop) {
+                                ItemEntity itement = new ItemEntity(event.world, player.getX(), player.getY(), player.getZ(), is);
+                                event.world.addFreshEntity(itement);
+                            } else {
+                                player.getInventory().add(is);
+                            }
+                        }
+                    }
+                }
+            }
+            if (inspect.commands != null) {
+                for (var command: inspect.commands) {
+                    for (var player: event.world.players()) {
+                        if (player.getId() == sdkEntry.getKey()) {
+                            // Run the command
+                            event.world.getServer().getCommands().performCommand(player.createCommandSourceStack().withSuppressedOutput().withPermission(4), command.getMessage(player.getName().getContents(), interaction.BuyerName));
+                        }
+                    }
+                }
+            }
+            if (inspect.chests != null) {
+                for (var chest: inspect.chests) {
+                    for (var player: event.world.players()) {
+                        if (player.getId() == sdkEntry.getKey()) {
+                            // Spawn the chest at the player
+                            chest.setBlockEntity(event.world, player.getX(), player.getY(), player.getZ(), interaction.BuyerName);
+                        }
+                    }
+                }
+            }
+            if (inspect.messages != null) {
+                for (var message: inspect.messages) {
+                    message.message = message.message.replaceAll("\\$DISPLAYNAME", interaction.BuyerName);
+                    if (message.toAllPlayers != null && message.toAllPlayers) {
+                        for (var player: event.world.players()) {
+                            player.sendMessage(new TextComponent(message.message), UUID.randomUUID());
+                        }
+                    }
+                    for (var player: event.world.players()) {
+                        if (player.getId() == sdkEntry.getKey()) {
+                            // Spawn the chest at the player
+                            player.sendMessage(new TextComponent(message.message), UUID.randomUUID());
+                        }
+                    }
+                }
+            }
+            if (inspect.mobs != null) {
+                LOGGER.info("Spawning {} mobs", inspect.mobs.length);
+                for (var mobComponent: inspect.mobs) {
+                    for (var player: event.world.players()) {
+                        if (player.getId() == sdkEntry.getKey()) {
+                            LOGGER.info("SPAWNING mob with id {}", mobComponent.entityID);
+                            Mob mob = mobComponent.getMob(event.world, interaction.BuyerName);
+                            mob.setPos(player.getX(), player.getY(), player.getZ());
+                            event.world.addFreshEntity(mob);
+                        }
+                    }
+                }
+            }
+            if (inspect.sounds != null) {
+                for (var soundComponent: inspect.sounds) {
+                    for (var player: event.world.players()) {
+                        if (player.getId() == sdkEntry.getKey()) {
+                            BlockPos bp = new BlockPos(player.getX(), player.getY()+1, player.getZ());
+                            if (soundComponent.delaySeconds != null && soundComponent.delaySeconds > 0) {
+                                ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(1);
+                                exec.schedule(new Runnable() {
+                                public void run() {
+                                    event.world.playSound(null, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(soundComponent.soundID)), SoundSource.AMBIENT, 1f, 1f);
+                                }  
+                                }, 1, TimeUnit.SECONDS);
+                            } else {
+                                event.world.playSound(null, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(soundComponent.soundID)), SoundSource.AMBIENT, 1f, 1f);
+                            }
+                        }
+                    }
+                }
+            }
+            if (inspect.statuses != null) {
+                for (var statusComponent: inspect.statuses) {
+                    for (var player: event.world.players()) {
+                        if (player.getId() == sdkEntry.getKey()) {
+                            MobEffectInstance mei = new MobEffectInstance(ForgeRegistries.MOB_EFFECTS.getValue(new ResourceLocation(statusComponent.statusID)), statusComponent.tickDuration);
+                            player.addEffect(mei);
+                        }
+                    }
+                }
+            }
+            
+            // Ack the event
             sdk.ackEventAsync(new EventResult(interaction.EventID, true, null));
         }
     }
@@ -210,6 +328,10 @@ public class TangiaMod {
         public static void onInteractEvent(PlayerInteractEvent.RightClickItem event) {
             LOGGER.info("Got interaction event '{}'", event.toString());
             LOGGER.info("Got interaction item '{}'", event.getItemStack());
+            var gameId = System.getenv("DEBUG");
+            if (gameId == null) {
+                return;
+            }
             Creeper creeper = new Creeper(EntityType.CREEPER, event.getWorld());
             creeper.setPos(event.getPlayer().getX(), event.getPlayer().getY(), event.getPlayer().getZ());
             Level world = event.getWorld();
@@ -262,7 +384,8 @@ public class TangiaMod {
             // world.addFreshEntity(entityToSpawn);
 
             // spawn ghast where player is looking
-            Ghast entityToSpawn = EntityType.GHAST.create(world);
+            // Ghast entityToSpawn = EntityType.GHAST.create(world);
+            Entity entityToSpawn = ForgeRegistries.ENTITIES.getValue(new ResourceLocation("donkey")).create(world);
             entityToSpawn.moveTo(Vec3.atBottomCenterOf(new BlockPos(
                 event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
                     ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getX(),
@@ -270,19 +393,44 @@ public class TangiaMod {
                     ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getY(),
                 event.getPlayer().level.clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
                     ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getZ())));
-            world.addFreshEntity(entityToSpawn);
+            if (entityToSpawn instanceof Mob mob) {
+                mob.setNoAi(true);
+                world.addFreshEntity(mob);
+            }
+
 
             // apply a status effect
-            MobEffectInstance mei = new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100);
+            MobEffectInstance mei = new MobEffectInstance(ForgeRegistries.MOB_EFFECTS.getValue(new ResourceLocation("strength")), 200);
+            // MobEffectInstance mei = new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100);
             event.getPlayer().addEffect(mei);
+            // event.getPlayer().getName().getContents();
 
             event.getPlayer().sendMessage(new TextComponent("personal message"), UUID.randomUUID());
 
             // drop an item
-            ItemStack enchantedAxe = new ItemStack(Items.DIAMOND_AXE, 1);
-            enchantedAxe.enchant(Enchantments.UNBREAKING, 3);
-            ItemEntity itement = new ItemEntity(world, event.getPlayer().getX(), event.getPlayer().getY(), event.getPlayer().getZ(), enchantedAxe);
+            ItemStack mossyblock = new ItemStack(ForgeRegistries.ITEMS.getValue(new ResourceLocation("minecraft:mossy_stone_brick_stairs")), 1);
+            mossyblock.enchant(ForgeRegistries.ENCHANTMENTS.getValue(new ResourceLocation("protection")), 3);
+            ItemEntity itement = new ItemEntity(world, event.getPlayer().getX(), event.getPlayer().getY(), event.getPlayer().getZ(), mossyblock);
             world.addFreshEntity(itement);
+
+            String testobj = "{\"chestName\":\"hello\",\"items\":[{\"itemID\":\"hey\"}]}";
+
+            Gson gson = new Gson();
+            ChestComponent actualObj = gson.fromJson(testobj, ChestComponent.class);
+            LOGGER.info("actual obj - {}", gson.toJson(actualObj));
+
+            // play a sound
+            world.playSound(event.getPlayer(), event.getPos(), ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("entity.lightning_bolt.thunder")), SoundSource.AMBIENT, 1f, 1f);
+            world.playSound(event.getPlayer(), event.getPos(), ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("entity.lightning_bolt.impact")), SoundSource.AMBIENT, 1f, 1f);
+
+            // Play a delayed sound
+            ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(1);
+            exec.schedule(new Runnable() {
+              public void run() {
+                  world.playSound(event.getPlayer(), event.getPos(), ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("entity.creeper.primed")), SoundSource.AMBIENT, 1f, 1f);
+                  world.playSound(event.getPlayer(), event.getPos(), ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("entity.creeper.primed")), SoundSource.AMBIENT, 1f, 1f);
+              }  
+            }, 1, TimeUnit.SECONDS);
         }
 
         @SubscribeEvent
