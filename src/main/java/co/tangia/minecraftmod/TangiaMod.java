@@ -182,113 +182,94 @@ public class TangiaMod {
             Gson gson = new Gson();
             InspectMetadata inspect = gson.fromJson(interaction.Metadata, InspectMetadata.class);
 
+            Player intendedPlayer = null;
+            for (var player: event.world.players()) {
+                if (player.getId() == sdkEntry.getKey()) {
+                    // Spawn the chest at the player
+                    intendedPlayer = player;
+                }
+            }
+
             if (inspect.items != null) {
                 for (var item: inspect.items) {
-                    for (var player: event.world.players()) {
-                        if (player.getId() == sdkEntry.getKey()) {
-                            ItemStack is = item.getItemStack(interaction.BuyerName);
-                            // Check if dropping or adding to inventory
-                            if (item.drop != null && item.drop) {
-                                ItemEntity itement = new ItemEntity(event.world, player.getX(), player.getY(), player.getZ(), is);
-                                event.world.addFreshEntity(itement);
-                            } else {
-                                player.getInventory().add(is);
-                            }
-                        }
-                        // DEBUG SHULKER
-                        ItemStack shulk = new ItemStack(Items.SHULKER_BOX, 1);
-                        NonNullList<ItemStack> shulkerItems = NonNullList.withSize(27, ItemStack.EMPTY);
-                        CompoundTag shulkNbt = new CompoundTag();
-                        CompoundTag shulkItems = new CompoundTag();
-                        ItemStack axe = new ItemStack(Items.NETHERITE_AXE, 1);
-                        axe.enchant(Enchantments.SHARPNESS, 5);
-                        shulkerItems.set(1, axe);
-                        ContainerHelper.saveAllItems(shulkItems, shulkerItems);
-                        shulkNbt.put("BlockEntityTag", shulkItems);
-                        CompoundTag displayTag = new CompoundTag();
-                        displayTag.putString("Name", Component.Serializer.toJson(new TextComponent("yeye")));
-                        shulkNbt.put("display", displayTag);
-                        shulk.setTag(shulkNbt);
-                        player.getInventory().add(shulk);
+                    ItemStack is = item.getItemStack(interaction.BuyerName);
+                    // Check if dropping or adding to inventory
+                    if (item.drop != null && item.drop) {
+                        ItemEntity itement = new ItemEntity(event.world, intendedPlayer.getX(), intendedPlayer.getY(), intendedPlayer.getZ(), is);
+                        event.world.addFreshEntity(itement);
+                    } else {
+                        intendedPlayer.getInventory().add(is);
                     }
+                    // DEBUG SHULKER
+                    ItemStack shulk = new ItemStack(Items.SHULKER_BOX, 1);
+                    NonNullList<ItemStack> shulkerItems = NonNullList.withSize(27, ItemStack.EMPTY);
+                    CompoundTag shulkNbt = new CompoundTag();
+                    CompoundTag shulkItems = new CompoundTag();
+                    ItemStack axe = new ItemStack(Items.NETHERITE_AXE, 1);
+                    axe.enchant(Enchantments.SHARPNESS, 5);
+                    shulkerItems.set(1, axe);
+                    ContainerHelper.saveAllItems(shulkItems, shulkerItems);
+                    shulkNbt.put("BlockEntityTag", shulkItems);
+                    CompoundTag displayTag = new CompoundTag();
+                    displayTag.putString("Name", Component.Serializer.toJson(new TextComponent("yeye")));
+                    shulkNbt.put("display", displayTag);
+                    shulk.setTag(shulkNbt);
+                    intendedPlayer.getInventory().add(shulk);
                 }
             }
             if (inspect.commands != null) {
                 for (var command: inspect.commands) {
-                    for (var player: event.world.players()) {
-                        if (player.getId() == sdkEntry.getKey()) {
-                            // Run the command
-                            event.world.getServer().getCommands().performCommand(player.createCommandSourceStack().withSuppressedOutput().withPermission(4), command.getMessage(player.getName().getContents(), interaction.BuyerName));
-                        }
-                    }
+                    // Run the command
+                    event.world.getServer().getCommands().performCommand(intendedPlayer.createCommandSourceStack().withSuppressedOutput().withPermission(4), command.getMessage(intendedPlayer.getName().getContents(), interaction.BuyerName));
                 }
             }
             if (inspect.chests != null) {
                 for (var chest: inspect.chests) {
-                    for (var player: event.world.players()) {
-                        if (player.getId() == sdkEntry.getKey()) {
-                            // Spawn the chest at the player
-                            chest.setBlockEntity(event.world, player.getX(), player.getY(), player.getZ(), interaction.BuyerName);
-                        }
-                    }
+                    // Spawn the chest at the player
+                    chest.setBlockEntity(event.world, intendedPlayer.getX(), intendedPlayer.getY(), intendedPlayer.getZ(), interaction.BuyerName);
                 }
             }
             if (inspect.messages != null) {
                 for (var message: inspect.messages) {
                     message.message = message.message.replaceAll("\\$DISPLAYNAME", interaction.BuyerName);
+                    message.message = message.message.replaceAll("\\$PLAYERNAME", intendedPlayer.getName().getContents());
                     if (message.toAllPlayers != null && message.toAllPlayers) {
                         for (var player: event.world.players()) {
                             player.sendMessage(new TextComponent(message.message), UUID.randomUUID());
                         }
-                    }
-                    for (var player: event.world.players()) {
-                        if (player.getId() == sdkEntry.getKey()) {
-                            // Spawn the chest at the player
-                            player.sendMessage(new TextComponent(message.message), UUID.randomUUID());
-                        }
+                    } else {
+                        intendedPlayer.sendMessage(new TextComponent(message.message), UUID.randomUUID());
                     }
                 }
             }
             if (inspect.mobs != null) {
                 LOGGER.info("Spawning {} mobs", inspect.mobs.length);
                 for (var mobComponent: inspect.mobs) {
-                    for (var player: event.world.players()) {
-                        if (player.getId() == sdkEntry.getKey()) {
-                            LOGGER.info("SPAWNING mob with id {}", mobComponent.entityID);
-                            Mob mob = mobComponent.getMob(event.world, interaction.BuyerName);
-                            mob.setPos(player.getX(), player.getY(), player.getZ());
-                            event.world.addFreshEntity(mob);
-                        }
-                    }
+                    LOGGER.info("SPAWNING mob with id {}", mobComponent.entityID);
+                    Mob mob = mobComponent.getMob(event.world, interaction.BuyerName);
+                    mob.setPos(intendedPlayer.getX(), intendedPlayer.getY(), intendedPlayer.getZ());
+                    event.world.addFreshEntity(mob);
                 }
             }
             if (inspect.sounds != null) {
                 for (var soundComponent: inspect.sounds) {
-                    for (var player: event.world.players()) {
-                        if (player.getId() == sdkEntry.getKey()) {
-                            BlockPos bp = new BlockPos(player.getX(), player.getY()+1, player.getZ());
-                            if (soundComponent.delaySeconds != null && soundComponent.delaySeconds > 0) {
-                                ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(1);
-                                exec.schedule(new Runnable() {
-                                public void run() {
-                                    event.world.playSound(null, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(soundComponent.soundID)), SoundSource.AMBIENT, 1f, 1f);
-                                }  
-                                }, 1, TimeUnit.SECONDS);
-                            } else {
-                                event.world.playSound(null, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(soundComponent.soundID)), SoundSource.AMBIENT, 1f, 1f);
-                            }
-                        }
+                    BlockPos bp = new BlockPos(intendedPlayer.getX(), intendedPlayer.getY()+1, intendedPlayer.getZ());
+                    if (soundComponent.delaySeconds != null && soundComponent.delaySeconds > 0) {
+                        ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(1);
+                        exec.schedule(new Runnable() {
+                        public void run() {
+                            event.world.playSound(null, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(soundComponent.soundID)), SoundSource.AMBIENT, 1f, 1f);
+                        }  
+                        }, 1, TimeUnit.SECONDS);
+                    } else {
+                        event.world.playSound(null, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(soundComponent.soundID)), SoundSource.AMBIENT, 1f, 1f);
                     }
                 }
             }
             if (inspect.statuses != null) {
                 for (var statusComponent: inspect.statuses) {
-                    for (var player: event.world.players()) {
-                        if (player.getId() == sdkEntry.getKey()) {
-                            MobEffectInstance mei = new MobEffectInstance(ForgeRegistries.MOB_EFFECTS.getValue(new ResourceLocation(statusComponent.statusID)), statusComponent.tickDuration);
-                            player.addEffect(mei);
-                        }
-                    }
+                    MobEffectInstance mei = new MobEffectInstance(ForgeRegistries.MOB_EFFECTS.getValue(new ResourceLocation(statusComponent.statusID)), statusComponent.tickDuration);
+                    intendedPlayer.addEffect(mei);
                 }
             }
             
