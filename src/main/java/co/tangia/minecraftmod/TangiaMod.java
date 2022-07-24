@@ -38,6 +38,7 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BedBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
@@ -187,6 +188,21 @@ public class TangiaMod {
                 if (player.getId() == sdkEntry.getKey()) {
                     // Spawn the chest at the player
                     intendedPlayer = player;
+                }
+            }
+
+            // Check if we are in 30 blocks of a placed bed
+            Boolean bedFound = false;
+            for (int x = -30; x<=30 && !bedFound; x++) {
+                for (int y = -30; y<=30 && !bedFound; y++) {
+                    for (int z = -30; z<=30 && !bedFound; z++) {
+                        BlockPos bp = new BlockPos(intendedPlayer.getX()+x, intendedPlayer.getY()+y, intendedPlayer.getZ()+z);
+                        BlockEntity block = event.world.getBlockEntity(bp);
+                        if (block instanceof BedBlockEntity bed) {
+                            LOGGER.info("WITHIN range of bed");
+                            bedFound = true;
+                        }
+                    }
                 }
             }
 
