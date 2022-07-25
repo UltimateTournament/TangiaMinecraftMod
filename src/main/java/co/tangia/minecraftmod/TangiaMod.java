@@ -260,10 +260,10 @@ public class TangiaMod {
                     // Keep spawning items
                     Random rand = new Random();
                     var iter = 0;
-                    for (int i = 0; i<1000&&iter<kit.numItems; i++) {
+                    for (int i = 0; i<10000&&iter<kit.numItems; i++) {
                         // Iterate over items trying to spawn them, try max 1k times
                         int randomInt = rand.nextInt(totalWeight);
-                        var currentItem = kit.items[iter%kit.items.length];
+                        var currentItem = kit.items[i%kit.items.length];
                         if (randomInt <= currentItem.weight) {
                             // Spawn the item
                             ItemStack itemStack = currentItem.getItemStack(null);
