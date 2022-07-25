@@ -1,6 +1,7 @@
 
 package co.tangia.minecraftmod;
 
+import co.tangia.minecraftmod.chatcommands.TowerCommand;
 import com.google.gson.Gson;
 import co.tangia.minecraftmod.chatcommands.LoginCommand;
 import co.tangia.minecraftmod.chatcommands.LogoutCommand;
@@ -96,7 +97,6 @@ public class TangiaMod {
 
         // Register ourselves for server and other game events we are interested in
         MinecraftForge.EVENT_BUS.register(this);
-        RetryPolicy<Response<Object>> retryPolicy = RetryPolicy.ofDefaults();
     }
 
     private void setup(final FMLCommonSetupEvent event) {
@@ -131,6 +131,7 @@ public class TangiaMod {
     public void onCommandsRegister(RegisterCommandsEvent event) {
         new LoginCommand(this).register(event.getDispatcher());
         new LogoutCommand(this).register(event.getDispatcher());
+        new TowerCommand().register(event.getDispatcher());
         ConfigCommand.register(event.getDispatcher());
     }
 
