@@ -3,6 +3,7 @@ package co.tangia.minecraftmod;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import org.slf4j.Logger;
 
@@ -31,10 +32,10 @@ public class TowerComponent {
 
     private void placeBase(Level level) {
         for (int x = xStart; x < xStart + width; x++) {
-            for (int y = yStart; y < yStart + depth; y++) {
-                for (int z = zStart; z < zStart + height; z++) {
+            for (int y = yStart; y < yStart + height; y++) { // todo
+                for (int z = zStart; z < zStart + depth; z++) {
                     var bp = new BlockPos(x, y, z);
-                    level.setBlockAndUpdate(bp, Blocks.AIR.defaultBlockState());
+                    level.setBlock(bp, Blocks.BEDROCK.defaultBlockState(), Block.getId(Blocks.BEDROCK.defaultBlockState()));
                 }
             }
         }
@@ -42,10 +43,10 @@ public class TowerComponent {
 
     private void clearSpace(Level level) {
         for (int x = xStart; x < xStart + width; x++) {
-            for (int y = yStart; y < yStart + depth; y++) {
-                for (int z = zStart; z < zStart + baseHeight; z++) {
+            for (int y = yStart; y < yStart + height; y++) {
+                for (int z = zStart; z < zStart + depth; z++) {
                     var bp = new BlockPos(x, y, z);
-                    level.setBlockAndUpdate(bp, Blocks.BEDROCK.defaultBlockState());
+                    level.setBlock(bp, Blocks.AIR.defaultBlockState(), Block.getId(Blocks.AIR.defaultBlockState()));
                 }
             }
         }
