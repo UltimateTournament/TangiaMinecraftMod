@@ -8,4 +8,5 @@ public class InspectMetadata {
   public MobComponent[] mobs;
   public SoundComponent[] sounds;
   public StatusComponent[] statuses;
+  public KitComponent[] kits;
 }

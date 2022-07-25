@@ -16,6 +16,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.effect.MobEffect;
@@ -189,21 +190,26 @@ public class TangiaMod {
                 sdk.ackEventAsync(new EventResult(interaction.EventID, false, "player not in game"));
                 continue;
             }
+            ServerPlayer serverPlayer = event.world.getServer().getPlayerList().getPlayer(sdkEntry.getKey());
+            var respawnPoint = serverPlayer.getRespawnPosition();
 
             // Check if we are in 30 blocks of a placed bed
-            var bedFound = false;
-            for (int x = -30; x <= 30 && !bedFound; x++) {
-                for (int y = -30; y <= 30 && !bedFound; y++) {
-                    for (int z = -30; z <= 30 && !bedFound; z++) {
-                        BlockPos bp = new BlockPos(player.getX() + x, player.getY() + y, player.getZ() + z);
-                        BlockEntity block = event.world.getBlockEntity(bp);
-                        if (block instanceof BedBlockEntity bed) {
-                            LOGGER.info("WITHIN range of bed");
-                            bedFound = true;
-                        }
-                    }
-                }
-            }
+            // var bedFound = false;
+            // for (int x = -30; x <= 30 && !bedFound; x++) {
+            //     for (int y = -30; y <= 30 && !bedFound; y++) {
+            //         for (int z = -30; z <= 30 && !bedFound; z++) {
+            //             BlockPos bp = new BlockPos(player.getX() + x, player.getY() + y, player.getZ() + z);
+            //             BlockEntity block = event.world.getBlockEntity(bp);
+            //             if (block instanceof BedBlockEntity bed) {
+            //                 LOGGER.info("WITHIN range of bed");
+            //                 bedFound = true;
+            //             }
+            //         }
+            //     }
+            // }
+
+            // Check if within 50 blocks of spawnpoint
+            
 
             if (inspect.items != null) {
                 for (var item : inspect.items) {
@@ -242,6 +248,30 @@ public class TangiaMod {
                 for (var chest : inspect.chests) {
                     // Spawn the chest at the player
                     chest.setBlockEntity(event.world, player.getX(), player.getY(), player.getZ(), interaction.BuyerName);
+                }
+            }
+            if (inspect.kits != null) {
+                for (var kit : inspect.kits) {
+                    var totalWeight = 0;
+                    for (var item: kit.items) {
+                        // Add up the weights
+                        totalWeight += item.weight;
+                    }
+                    // Keep spawning items
+                    Random rand = new Random();
+                    var iter = 0;
+                    for (int i = 0; i<1000&&iter<kit.numItems; i++) {
+                        // Iterate over items trying to spawn them, try max 1k times
+                        int randomInt = rand.nextInt(totalWeight);
+                        var currentItem = kit.items[iter%kit.items.length];
+                        if (randomInt <= currentItem.weight) {
+                            // Spawn the item
+                            ItemStack itemStack = currentItem.getItemStack(null);
+                            ItemEntity itemEntity = new ItemEntity(event.world, player.getX(), player.getY(), player.getZ(), itemStack);
+                            event.world.addFreshEntity(itemEntity);
+                            iter++;
+                        }
+                    }
                 }
             }
             if (inspect.messages != null) {
@@ -341,6 +371,16 @@ public class TangiaMod {
     @Mod.EventBusSubscriber(modid = "tangia", bus = Bus.FORGE)
     public static class MyStaticServerOnlyEventHandler {
         @SubscribeEvent
+        public static void onInteractBlockEvent(PlayerInteractEvent.RightClickBlock event) {
+            LOGGER.info("Got block interaction event '{}'", event.toString());
+        }
+        
+        @SubscribeEvent
+        public static void onInteractEmptyEvent(PlayerInteractEvent.RightClickEmpty event) {
+            LOGGER.info("Got empty interaction event '{}'", event.toString());
+        }
+
+        @SubscribeEvent
         public static void onInteractEvent(PlayerInteractEvent.RightClickItem event) {
             LOGGER.info("Got interaction event '{}'", event.toString());
             LOGGER.info("Got interaction item '{}'", event.getItemStack());
@@ -374,6 +414,10 @@ public class TangiaMod {
             sword.setHoverName(name);
             event.getPlayer().getInventory().add(totem);
             event.getPlayer().getInventory().add(sword);
+
+            var kelp = new ItemStack(Items.DRIED_KELP_BLOCK, 1);
+            kelp.setHoverName(new TextComponent("kit - hehe"));
+            event.getPlayer().getInventory().add(kelp);
 
             BlockPos bp = new BlockPos(event.getPlayer().getX(), event.getPlayer().getY(), event.getPlayer().getZ() + 1);
             world.setBlockAndUpdate(bp, Blocks.CHEST.defaultBlockState());
@@ -460,6 +504,8 @@ public class TangiaMod {
         @SubscribeEvent
         public static void onLeverEvent(PlayerInteractEvent.RightClickBlock event) {
             BlockPos bp = event.getPos();
+            var blockState = event.getWorld().getBlockState(bp);
+            LOGGER.info("Interacted with block - {}", blockState.getBlock().getRegistryName());
             BlockEntity b = event.getWorld().getBlockEntity(bp);
             if (b instanceof ShulkerBoxBlockEntity sbe) {
                 var textcomp = sbe.getCustomName();
