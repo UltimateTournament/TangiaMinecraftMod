@@ -5,13 +5,21 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import org.slf4j.Logger;
 
 public class TowerComponent {
     private final int width = 30;
     private final int depth = 30;
-    private final int height = 120;
+    private final int height = 100;
     private final int baseHeight = 3;
+    private final int floorHeight = 5;
+    private final int doorHeight = 3;
+    private final int doorWidth = 3;
+    private final int spaceGap = 3;
+    private final int wallThick = 3;
+    private final int stairLen = 10;
+    private final int stairWidth = 2;
     private final int xStart;
     private final int yStart;
     private final int zStart;
@@ -26,27 +34,100 @@ public class TowerComponent {
 
     public void setBlockEntities(Level level) {
         clearSpace(level);
-        placeBase(level);
-        LOGGER.info("tower built {},{},{}", xStart, yStart, zStart);
+        placeBase(level, yStart, baseHeight);
+        placeFloor(level, yStart);
+        createDoor(level);
+        placeFloor(level, yStart + floorHeight);
+        createStairs(level, yStart);
+        LOGGER.info("tower built v2 {},{},{}", xStart, yStart, zStart);
     }
 
-    private void placeBase(Level level) {
-        for (int x = xStart; x < xStart + width; x++) {
-            for (int y = yStart; y < yStart + height; y++) { // todo
-                for (int z = zStart; z < zStart + depth; z++) {
+    private void createDoor(Level level) {
+        for (int y = yStart; y < yStart + doorHeight; y++) {
+            for (int z = zStart + depth / 2; z < zStart + depth / 2 + doorWidth; z++) {
+                for (int x = xStart; x < xStart + wallThick; x++) {
                     var bp = new BlockPos(x, y, z);
-                    level.setBlock(bp, Blocks.BEDROCK.defaultBlockState(), Block.getId(Blocks.BEDROCK.defaultBlockState()));
+                    level.setBlock(bp, Blocks.AIR.defaultBlockState(), 3);
                 }
             }
         }
     }
 
-    private void clearSpace(Level level) {
+    private void placeFloor(Level level, int yStart) {
+        placeBase(level, yStart, 1);
         for (int x = xStart; x < xStart + width; x++) {
-            for (int y = yStart; y < yStart + height; y++) {
-                for (int z = zStart; z < zStart + depth; z++) {
+            var zStep = depth - 1;
+            if (x == xStart || x == xStart + width - 1)
+                zStep = 1;
+            for (int z = zStart; z < zStart + depth; z += zStep) {
+                for (int y = yStart; y < yStart + floorHeight; y++) {
                     var bp = new BlockPos(x, y, z);
-                    level.setBlock(bp, Blocks.AIR.defaultBlockState(), Block.getId(Blocks.AIR.defaultBlockState()));
+                    level.setBlock(bp, Blocks.BEDROCK.defaultBlockState(), 3);
+                }
+            }
+        }
+        // walls are inset
+        setBlocks(level,
+            xStart, xStart + wallThick,
+            zStart, zStart + depth,
+            yStart, yStart + floorHeight,
+            Blocks.BEDROCK.defaultBlockState());
+        setBlocks(level,
+            xStart + width - wallThick, xStart + width,
+            zStart, zStart + depth,
+            yStart, yStart + floorHeight,
+            Blocks.BEDROCK.defaultBlockState());
+        setBlocks(level,
+            xStart, xStart + width,
+            zStart, zStart + wallThick,
+            yStart, yStart + floorHeight,
+            Blocks.BEDROCK.defaultBlockState());
+        setBlocks(level,
+            xStart, xStart + width,
+            zStart + depth - wallThick, zStart + depth,
+            yStart, yStart + floorHeight,
+            Blocks.BEDROCK.defaultBlockState());
+    }
+
+    private void createStairs(Level level, int yStart) {
+        setBlocks(level,
+            xStart + width - wallThick - stairLen, xStart + width - wallThick,
+            zStart + depth - wallThick - stairWidth, zStart + depth - wallThick,
+            yStart, yStart + floorHeight + 1,
+            Blocks.AIR.defaultBlockState());
+        var yStep = (double) (floorHeight - 1) / (double) stairLen;
+        for (int i = 0; i < stairLen; i++) {
+            var y = (int) Math.round(yStart + yStep * i);
+            setBlocks(level,
+                xStart + width - wallThick - stairLen + i, xStart + width - wallThick - stairLen + i + 1,
+                zStart + depth - wallThick - stairWidth, zStart + depth - wallThick,
+                y, y + 1,
+                Blocks.STONE.defaultBlockState());
+        }
+    }
+
+    private void placeBase(Level level, int yStart, int thick) {
+        setBlocks(level,
+            xStart, xStart + width,
+            zStart, zStart + depth,
+            yStart - thick, yStart,
+            Blocks.BEDROCK.defaultBlockState());
+    }
+
+    private void clearSpace(Level level) {
+        setBlocks(level,
+            xStart - spaceGap, xStart + width + spaceGap,
+            zStart - spaceGap, zStart + depth + spaceGap,
+            yStart, yStart + height,
+            Blocks.AIR.defaultBlockState());
+    }
+
+    private void setBlocks(Level level, int xRangeStart, int xRangeEnd, int zRangeStart, int zRangeEnd, int yRangeStart, int yRangeEnd, BlockState blockState) {
+        for (int x = xRangeStart; x < xRangeEnd; x++) {
+            for (int z = zRangeStart; z < zRangeEnd; z++) {
+                for (int y = yRangeStart; y < yRangeEnd; y++) {
+                    var bp = new BlockPos(x, y, z);
+                    level.setBlock(bp, blockState, 3);
                 }
             }
         }

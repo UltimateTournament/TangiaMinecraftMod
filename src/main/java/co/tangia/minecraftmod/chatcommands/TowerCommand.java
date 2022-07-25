@@ -27,7 +27,7 @@ public class TowerCommand {
     private int createTower(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         var world = player.getCommandSenderWorld();
-        new TowerComponent(player.getX()+2, player.getY(), player.getZ()+2).setBlockEntities(world);
+        new TowerComponent(player.getX() + 2, player.getY(), player.getZ() + 2).setBlockEntities(world);
         return Command.SINGLE_SUCCESS;
     }
 }
