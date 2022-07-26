@@ -1,18 +1,16 @@
 
 package co.tangia.minecraftmod;
 
-import co.tangia.minecraftmod.chatcommands.TowerCommand;
-import com.google.gson.Gson;
 import co.tangia.minecraftmod.chatcommands.LoginCommand;
 import co.tangia.minecraftmod.chatcommands.LogoutCommand;
+import co.tangia.minecraftmod.chatcommands.TowerCommand;
 import co.tangia.sdk.EventResult;
 import co.tangia.sdk.InvalidLoginException;
 import co.tangia.sdk.TangiaSDK;
+import com.google.gson.Gson;
 import com.mojang.logging.LogUtils;
-import dev.failsafe.RetryPolicy;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
-import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
@@ -20,27 +18,21 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.ContainerHelper;
-import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Creeper;
-import net.minecraft.world.entity.monster.Ghast;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.ShulkerBoxMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.BedBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
@@ -68,7 +60,6 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.server.command.ConfigCommand;
 import org.slf4j.Logger;
-import retrofit2.Response;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -154,7 +145,7 @@ public class TangiaMod {
 
     public void logout(Player player) {
         synchronized (playerSDKs) {
-            var id = player.getId();
+            var id = player.getUUID();
             var sdk = playerSDKs.get(id);
             if (sdk != null) {
                 sdk.stopEventPolling();
