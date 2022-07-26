@@ -2,13 +2,16 @@ package co.tangia.minecraftmod;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.CampfireBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import org.slf4j.Logger;
 
+@Mod.EventBusSubscriber
 public class TowerComponent {
     private final int width = 30;
     private final int depth = 30;
@@ -25,6 +28,13 @@ public class TowerComponent {
     private final int xStart;
     private final int yStart;
     private final int zStart;
+    private final double lavaPerTick = 1.0 / (10 * 30);
+    private boolean lavaRising;
+    private double lavaY;
+    private int lavaLastYBlock;
+
+    //HACK: how to get tick events in all class instances?
+    private static TowerComponent lastInstance;
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
@@ -32,6 +42,7 @@ public class TowerComponent {
         this.xStart = (int) xStart;
         this.yStart = (int) yStart;
         this.zStart = (int) zStart;
+        lastInstance = this;
     }
 
     public void setBlockEntities(Level level) {
@@ -55,11 +66,19 @@ public class TowerComponent {
     }
 
     private void createDoor(Level level) {
+        setDoor(level, Blocks.AIR.defaultBlockState());
+    }
+
+    private void sealDoor(Level level) {
+        setDoor(level, Blocks.BEDROCK.defaultBlockState());
+    }
+
+    private void setDoor(Level level, BlockState doorBlock) {
         for (int y = yStart; y < yStart + doorHeight; y++) {
             for (int z = zStart + depth / 2; z < zStart + depth / 2 + doorWidth; z++) {
                 for (int x = xStart; x < xStart + wallThick; x++) {
                     var bp = new BlockPos(x, y, z);
-                    level.setBlock(bp, Blocks.AIR.defaultBlockState(), 3);
+                    level.setBlock(bp, doorBlock, 3);
                 }
             }
         }
@@ -145,4 +164,40 @@ public class TowerComponent {
         }
     }
 
+    public void startLavaRising(Level level) {
+        LOGGER.info("LAVA starts rising");
+        this.lavaRising = true;
+        this.lavaY = this.yStart;
+        this.lavaLastYBlock = this.yStart - 1;
+        sealDoor(level);
+    }
+    public void stopLavaRising() {
+        LOGGER.info("LAVA stopped rising");
+        this.lavaRising = false;
+    }
+
+    private void worldTick(TickEvent.WorldTickEvent event) {
+        if (!lavaRising) {
+            return;
+        }
+        lavaY += lavaPerTick;
+        if ((int) lavaY > lavaLastYBlock) {
+            LOGGER.info("LAVA IS RISING");
+            setBlocks(event.world,
+                xStart + wallThick, xStart + width - wallThick,
+                zStart + wallThick, zStart + depth - wallThick,
+                lavaLastYBlock + 1, (int) lavaY + 1,
+                Blocks.LAVA.defaultBlockState());
+            lavaLastYBlock = (int) lavaY;
+        }
+        if (lavaLastYBlock > yStart + height)
+            stopLavaRising();
+    }
+
+    @SubscribeEvent
+    public static void onTick(TickEvent.WorldTickEvent event) {
+        if (lastInstance == null)
+            return;
+        lastInstance.worldTick(event);
+    }
 }
