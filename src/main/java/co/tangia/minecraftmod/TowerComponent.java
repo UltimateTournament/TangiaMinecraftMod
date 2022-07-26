@@ -2,9 +2,10 @@ package co.tangia.minecraftmod;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.CampfireBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.slf4j.Logger;
 
@@ -20,6 +21,7 @@ public class TowerComponent {
     private final int wallThick = 3;
     private final int stairLen = 10;
     private final int stairWidth = 2;
+    private final int floors = 20;
     private final int xStart;
     private final int yStart;
     private final int zStart;
@@ -37,9 +39,19 @@ public class TowerComponent {
         placeBase(level, yStart, baseHeight);
         placeFloor(level, yStart);
         createDoor(level);
-        placeFloor(level, yStart + floorHeight);
-        createStairs(level, yStart);
+        for (int i = 1; i <= floors; i++) {
+            placeFloor(level, yStart + i * floorHeight);
+            createStairs(level, yStart + (i - 1) * floorHeight);
+            placeLight(level, xStart + width / 2, yStart + i * floorHeight, zStart + depth / 2);
+        }
         LOGGER.info("tower built v2 {},{},{}", xStart, yStart, zStart);
+    }
+
+    private void placeLight(Level level, int x, int y, int z) {
+        var bp = new BlockPos(x, y, z);
+        level.setBlockAndUpdate(bp, Blocks.CAMPFIRE.defaultBlockState());
+        var block = new CampfireBlockEntity(bp, Blocks.CAMPFIRE.defaultBlockState());
+        level.setBlockEntity(block);
     }
 
     private void createDoor(Level level) {
