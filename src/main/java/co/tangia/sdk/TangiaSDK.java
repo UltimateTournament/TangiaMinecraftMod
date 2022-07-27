@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Set;
-import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ArrayBlockingQueue;
 
 public class TangiaSDK {
     public static final String PROD_URL = "https://api.tangia.co/";
@@ -23,8 +23,8 @@ public class TangiaSDK {
     private EventPoller eventPoller = new EventPoller();
     private final String gameID;
     private final String gameVersion;
-    private final SynchronousQueue<InteractionEvent> eventQueue = new SynchronousQueue<>();
-    private final SynchronousQueue<EventResult> eventAckQueue = new SynchronousQueue<>();
+    private final ArrayBlockingQueue<InteractionEvent> eventQueue = new ArrayBlockingQueue<>(100);
+    private final ArrayBlockingQueue<EventResult> eventAckQueue = new ArrayBlockingQueue<>(100);
     private final Set<String> handledEventIds = new HashSet<>();
     private final TangiaApi api;
 
@@ -70,9 +70,9 @@ public class TangiaSDK {
 
     public void ackEventAsync(EventResult e) {
         try {
-            eventAckQueue.put(e);
-        } catch (InterruptedException ex) {
-            LOGGER.warn("interrupted when ack-ing");
+            eventAckQueue.add(e);
+        } catch (IllegalStateException ex) {
+            LOGGER.warn("ack-queue is full!");
         }
     }
 
