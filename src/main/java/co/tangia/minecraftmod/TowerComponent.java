@@ -24,7 +24,7 @@ public class TowerComponent {
     private final int doorWidth = 3;
     private final int spaceGap = 3;
     private final int wallThick = 3;
-    private final int stairLen = 10;
+    private final int stairLen = width / 3;
     private final int stairWidth = 2;
     private final int floors;
     private final int xStart;
