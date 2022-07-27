@@ -30,7 +30,7 @@ public class TowerCommand {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         var world = player.getCommandSenderWorld();
         var tower = new TowerComponent(player.getX() + 2, player.getY(), player.getZ() + 2, 20);
-        tower.setBlocks(world);
+        tower.instantiate(world, true);
         this.lastTower = tower;
         return Command.SINGLE_SUCCESS;
     }
@@ -39,7 +39,7 @@ public class TowerCommand {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         var world = player.getCommandSenderWorld();
         var tower = new TowerComponent(player.getX() + 2, player.getY(), player.getZ() + 2, 0);
-        tower.setBlocks(world);
+        tower.instantiate(world, false);
         return Command.SINGLE_SUCCESS;
     }
 }

@@ -46,12 +46,13 @@ public class TowerComponent {
         this.floors = floors;
     }
 
-    public void setBlocks(Level level) {
+    public void instantiate(Level level, boolean withLavaLever) {
         clearSpace(level);
         placeBasePlate(level);
         placeFloor(level, yStart, 0);
         placeLight(level, xStart + width / 2, yStart, zStart + depth / 2);
-        placeStartLever(level, xStart + width / 2 + 1, yStart, zStart + depth / 2);
+        if (withLavaLever)
+            placeStartLever(level, xStart + width / 2 + 1, yStart, zStart + depth / 2);
         createDoor(level);
         for (int i = 1; i <= floors; i++) {
             placeFloor(level, yStart + i * floorHeight, 2);
