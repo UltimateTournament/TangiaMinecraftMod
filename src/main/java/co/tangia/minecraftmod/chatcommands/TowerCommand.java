@@ -38,7 +38,7 @@ public class TowerCommand {
     private int template(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         var world = player.getCommandSenderWorld();
-        var tower = new TowerComponent(player.getX() + 2, player.getY(), player.getZ() + 2, 1);
+        var tower = new TowerComponent(player.getX() + 2, player.getY(), player.getZ() + 2, 0);
         tower.setBlocks(world);
         return Command.SINGLE_SUCCESS;
     }
