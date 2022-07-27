@@ -120,10 +120,17 @@ public class TangiaMod {
 
     @SubscribeEvent
     public void onCommandsRegister(RegisterCommandsEvent event) {
+        ConfigCommand.register(event.getDispatcher());
+
         new LoginCommand(this).register(event.getDispatcher());
         new LogoutCommand(this).register(event.getDispatcher());
-        new TowerCommand().register(event.getDispatcher());
-        ConfigCommand.register(event.getDispatcher());
+        String features = System.getenv("TANGIA_MOD_FEATURES");
+        if (features == null) {
+            features = "";
+        }
+        if (features.contains("TOWER")) {
+            new TowerCommand().register(event.getDispatcher());
+        }
     }
 
     public void login(Player player, String code) throws InvalidLoginException, IOException {
@@ -201,7 +208,7 @@ public class TangiaMod {
             // }
 
             // Check if within 50 blocks of spawnpoint
-            
+
 
             if (inspect.items != null) {
                 for (var item : inspect.items) {
@@ -249,17 +256,17 @@ public class TangiaMod {
             if (inspect.kits != null) {
                 for (var kit : inspect.kits) {
                     var totalWeight = 0;
-                    for (var item: kit.items) {
+                    for (var item : kit.items) {
                         // Add up the weights
                         totalWeight += item.weight;
                     }
                     // Keep spawning items
                     Random rand = new Random();
                     var iter = 0;
-                    for (int i = 0; i<10000&&iter<kit.numItems; i++) {
+                    for (int i = 0; i < 10000 && iter < kit.numItems; i++) {
                         // Iterate over items trying to spawn them, try max 1k times
                         int randomInt = rand.nextInt(totalWeight);
-                        var currentItem = kit.items[i%kit.items.length];
+                        var currentItem = kit.items[i % kit.items.length];
                         if (randomInt <= currentItem.weight) {
                             // Spawn the item
                             ItemStack itemStack = currentItem.getItemStack(null);
@@ -358,7 +365,7 @@ public class TangiaMod {
         public static void onInteractBlockEvent(PlayerInteractEvent.RightClickBlock event) {
             LOGGER.info("Got block interaction event '{}'", event.toString());
         }
-        
+
         @SubscribeEvent
         public static void onInteractEmptyEvent(PlayerInteractEvent.RightClickEmpty event) {
             LOGGER.info("Got empty interaction event '{}'", event.toString());

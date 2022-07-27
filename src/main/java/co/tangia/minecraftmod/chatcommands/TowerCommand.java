@@ -12,9 +12,6 @@ import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
 
 public class TowerCommand {
-    private static final Logger LOGGER = LogUtils.getLogger();
-    private TowerComponent lastTower;
-
     public void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(
             Commands.literal("tangia")
@@ -31,7 +28,6 @@ public class TowerCommand {
         var world = player.getCommandSenderWorld();
         var tower = new TowerComponent(player.getX() + 2, player.getY(), player.getZ() + 2, 20);
         tower.instantiate(world, true);
-        this.lastTower = tower;
         return Command.SINGLE_SUCCESS;
     }
 
