@@ -26,7 +26,7 @@ public class TowerComponent {
     private final int wallThick = 3;
     private final int stairLen = 10;
     private final int stairWidth = 2;
-    private final int floors = 20;
+    private final int floors;
     private final int xStart;
     private final int yStart;
     private final int zStart;
@@ -39,10 +39,11 @@ public class TowerComponent {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public TowerComponent(double xStart, double yStart, double zStart) {
+    public TowerComponent(double xStart, double yStart, double zStart, int floors) {
         this.xStart = (int) xStart;
         this.yStart = (int) yStart;
         this.zStart = (int) zStart;
+        this.floors = floors;
     }
 
     public void setBlocks(Level level) {

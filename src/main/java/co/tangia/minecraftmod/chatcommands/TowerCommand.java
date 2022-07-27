@@ -22,23 +22,24 @@ public class TowerCommand {
                     .executes(this::createTower)));
         dispatcher.register(
             Commands.literal("tangia")
-                .then(Commands.literal("lava")
-                    .executes(this::startLava)));
+                .then(Commands.literal("template")
+                    .executes(this::template)));
     }
 
     private int createTower(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         var world = player.getCommandSenderWorld();
-        var tower = new TowerComponent(player.getX() + 2, player.getY(), player.getZ() + 2);
+        var tower = new TowerComponent(player.getX() + 2, player.getY(), player.getZ() + 2, 20);
         tower.setBlocks(world);
         this.lastTower = tower;
         return Command.SINGLE_SUCCESS;
     }
 
-    private int startLava(CommandContext<CommandSourceStack> ctx) {
-        if (lastTower == null)
-            return 0;
-        lastTower.startLavaRising(ctx.getSource().getLevel());
+    private int template(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        var world = player.getCommandSenderWorld();
+        var tower = new TowerComponent(player.getX() + 2, player.getY(), player.getZ() + 2, 1);
+        tower.setBlocks(world);
         return Command.SINGLE_SUCCESS;
     }
 }
