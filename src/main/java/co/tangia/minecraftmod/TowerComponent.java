@@ -61,6 +61,7 @@ public class TowerComponent {
         }
         LOGGER.info("tower built v2 {},{},{}", xStart, yStart, zStart);
         MinecraftForge.EVENT_BUS.register(this);
+        TowerLog.append(new TowerData(xStart,yStart,zStart,floors));
     }
 
     private void placeStartLever(Level level, int x, int y, int z) {
