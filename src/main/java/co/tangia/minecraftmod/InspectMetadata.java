@@ -9,4 +9,6 @@ public class InspectMetadata {
   public SoundComponent[] sounds;
   public StatusComponent[] statuses;
   public KitComponent[] kits;
+
+  public PrimedTntComponent[] primedTNT;
 }

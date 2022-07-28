@@ -19,7 +19,7 @@ public class TowerComponent {
     private final int depth = 30;
     private final int height = 100;
     private final int baseHeight = 5;
-    private final int floorHeight = 7;
+    private final int floorHeight = 12;
     private final int doorHeight = 3;
     private final int doorWidth = 3;
     private final int spaceGap = 3;
