@@ -294,16 +294,9 @@ public class TangiaMod {
             }
             if (inspect.primedTNT != null) {
                 for (var primedTNT : inspect.primedTNT) {
-                    ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(1);
-                    exec.schedule(new Runnable() {
-                        public void run() {
-                            var liveTNT = new PrimedTnt(event.level, player.getX()+primedTNT.xOffset, player.getY()+primedTNT.yOffset, player.getZ()+primedTNT.zOffset, null);
-                            if (primedTNT.primeTicks != 0) {
-                                liveTNT.setFuse(primedTNT.primeTicks);
-                            }
-                            event.level.addFreshEntity(liveTNT);
-                        }
-                    }, primedTNT.delaySeconds, TimeUnit.SECONDS);
+                    LOGGER.info("SPAWNING TNT");
+                    var tnt = new PrimedTntComponent(event.level.dayTime(), player.getUUID(), primedTNT.xOffset, primedTNT.yOffset, primedTNT.zOffset, primedTNT.primeTicks, primedTNT.delaySeconds);
+                    tnt.init();
                 }
             }
             if (inspect.mobs != null) {
@@ -317,17 +310,8 @@ public class TangiaMod {
             }
             if (inspect.sounds != null) {
                 for (var soundComponent : inspect.sounds) {
-                    BlockPos bp = new BlockPos(player.getX(), player.getY() + 1, player.getZ());
-                    if (soundComponent.delaySeconds != null && soundComponent.delaySeconds > 0) {
-                        ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(1);
-                        exec.schedule(new Runnable() {
-                            public void run() {
-                                event.level.playSound(null, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(soundComponent.soundID)), SoundSource.AMBIENT, 1f, 1f);
-                            }
-                        }, 1, TimeUnit.SECONDS);
-                    } else {
-                        event.level.playSound(null, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(soundComponent.soundID)), SoundSource.AMBIENT, 1f, 1f);
-                    }
+                    var sc = new SoundComponent(player.getUUID(), soundComponent.soundID, soundComponent.delaySeconds, event.level.dayTime());
+                    sc.init();
                 }
             }
             if (inspect.statuses != null) {
