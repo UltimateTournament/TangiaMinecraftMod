@@ -2,13 +2,13 @@ version: "3"
 
 services:
   mc:
-    image: hades32/itzg-docker-minecraft-server:mc-1.18.2-forge-40.1.68 # itzg/minecraft-server
+    image: itzg/minecraft-server
     ports:
       - 25565:25565
     environment:
       EULA: "TRUE"
-      VERSION: "1.18.2"
-      FORGEVERSION: "40.1.68"
+      VERSION: "1.19"
+      FORGEVERSION: "41.1.0"
       TYPE: FORGE
       MEMORY: ""
       JVM_XX_OPTS: "-XX:MaxRAMPercentage=75"

@@ -1,16 +1,14 @@
 package co.tangia.minecraftmod;
 
-import java.util.Map;
-
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.contents.LiteralContents;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraftforge.registries.ForgeRegistries;
+
+import java.util.Map;
 
 public class ItemStackComponent {
   public String itemID;
@@ -65,9 +63,9 @@ public class ItemStackComponent {
         }
     }
     if (this.hoverName != null && displayName != null) {
-      is.setHoverName(new TextComponent(this.hoverName.replaceAll("\\$DISPLAYNAME", displayName)));
+      is.setHoverName(MutableComponent.create(new LiteralContents(this.hoverName.replaceAll("\\$DISPLAYNAME", displayName))));
     } else if (this.hoverName != null) {
-      is.setHoverName(new TextComponent(this.hoverName));
+      is.setHoverName(MutableComponent.create(new LiteralContents(this.hoverName)));
     }
     return is;
   }

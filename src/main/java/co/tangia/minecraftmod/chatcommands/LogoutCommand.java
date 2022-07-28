@@ -3,13 +3,13 @@ package co.tangia.minecraftmod.chatcommands;
 import co.tangia.minecraftmod.TangiaMod;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.logging.LogUtils;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.contents.LiteralContents;
 import org.slf4j.Logger;
 
 import java.util.UUID;
@@ -30,15 +30,15 @@ public class LogoutCommand {
         dispatcher.register(
             Commands.literal("tangia")
                 .then(Commands.literal("logout")
-                    .executes(this::login)));
+                    .executes(this::logout)));
     }
 
-    private int login(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+    private int logout(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         if (mod == null)
             return 0;
         var player = ctx.getSource().getPlayerOrException();
         mod.logout(player);
-        player.sendMessage(new TextComponent("You're logged out now"), sender);
+        player.sendSystemMessage(MutableComponent.create(new LiteralContents("You're logged out now")));
         return Command.SINGLE_SUCCESS;
     }
 }
