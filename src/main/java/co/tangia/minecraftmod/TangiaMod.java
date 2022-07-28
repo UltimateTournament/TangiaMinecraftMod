@@ -9,6 +9,7 @@ import co.tangia.sdk.InvalidLoginException;
 import co.tangia.sdk.TangiaSDK;
 import com.google.gson.Gson;
 import com.mojang.logging.LogUtils;
+import net.minecraft.client.renderer.entity.TntRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
@@ -24,6 +25,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -290,6 +292,13 @@ public class TangiaMod {
                     }
                 }
             }
+            if (inspect.primedTNT != null) {
+                for (var primedTNT : inspect.primedTNT) {
+                    LOGGER.info("SPAWNING TNT");
+                    var tnt = new PrimedTntComponent(event.level.dayTime(), player.getUUID(), primedTNT.xOffset, primedTNT.yOffset, primedTNT.zOffset, primedTNT.primeTicks, primedTNT.delaySeconds);
+                    tnt.init();
+                }
+            }
             if (inspect.mobs != null) {
                 LOGGER.info("Spawning {} mobs", inspect.mobs.length);
                 for (var mobComponent : inspect.mobs) {
@@ -301,17 +310,8 @@ public class TangiaMod {
             }
             if (inspect.sounds != null) {
                 for (var soundComponent : inspect.sounds) {
-                    BlockPos bp = new BlockPos(player.getX(), player.getY() + 1, player.getZ());
-                    if (soundComponent.delaySeconds != null && soundComponent.delaySeconds > 0) {
-                        ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(1);
-                        exec.schedule(new Runnable() {
-                            public void run() {
-                                event.level.playSound(null, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(soundComponent.soundID)), SoundSource.AMBIENT, 1f, 1f);
-                            }
-                        }, 1, TimeUnit.SECONDS);
-                    } else {
-                        event.level.playSound(null, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(soundComponent.soundID)), SoundSource.AMBIENT, 1f, 1f);
-                    }
+                    var sc = new SoundComponent(player.getUUID(), soundComponent.soundID, soundComponent.delaySeconds, event.level.dayTime());
+                    sc.init();
                 }
             }
             if (inspect.statuses != null) {
@@ -375,10 +375,36 @@ public class TangiaMod {
         public static void onInteractEvent(PlayerInteractEvent.RightClickItem event) {
             LOGGER.info("Got interaction event '{}'", event.toString());
             LOGGER.info("Got interaction item '{}'", event.getItemStack());
-            var gameId = System.getenv("DEBUG");
-            if (gameId == null) {
-                return;
-            }
+//            var gameId = System.getenv("DEBUG");
+//            if (gameId == null) {
+//                return;
+//            }
+
+            // Spawn live TNT above someone's head
+            // Play a delayed sound
+            ScheduledThreadPoolExecutor exece = new ScheduledThreadPoolExecutor(1);
+            exece.schedule(new Runnable() {
+                public void run() {
+                    var liveTNT = new PrimedTnt(event.getLevel(), event.getEntity().getX(), event.getEntity().getY()+5, event.getEntity().getZ(), null);
+                    liveTNT.setFuse(30);
+                    event.getLevel().addFreshEntity(liveTNT);
+                }
+            }, 1, TimeUnit.SECONDS);
+            exece.schedule(new Runnable() {
+                public void run() {
+                    var liveTNT = new PrimedTnt(event.getLevel(), event.getEntity().getX(), event.getEntity().getY()+5, event.getEntity().getZ(), null);
+                    liveTNT.setFuse(30);
+                    event.getLevel().addFreshEntity(liveTNT);
+                }
+            }, 2, TimeUnit.SECONDS);
+            exece.schedule(new Runnable() {
+                public void run() {
+                    var liveTNT = new PrimedTnt(event.getLevel(), event.getEntity().getX(), event.getEntity().getY()+5, event.getEntity().getZ(), null);
+                    liveTNT.setFuse(30);
+                    event.getLevel().addFreshEntity(liveTNT);
+                }
+            }, 3, TimeUnit.SECONDS);
+
             Creeper creeper = new Creeper(EntityType.CREEPER, event.getLevel());
             creeper.setPos(event.getEntity().getX(), event.getEntity().getY(), event.getEntity().getZ());
             Level world = event.getLevel();
