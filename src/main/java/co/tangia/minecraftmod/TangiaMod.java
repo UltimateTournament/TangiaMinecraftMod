@@ -23,6 +23,7 @@ import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.item.PrimedTnt;
@@ -194,24 +195,6 @@ public class TangiaMod {
             ServerPlayer serverPlayer = event.level.getServer().getPlayerList().getPlayer(sdkEntry.getKey());
             var respawnPoint = serverPlayer.getRespawnPosition();
 
-            // Check if we are in 30 blocks of a placed bed
-            // var bedFound = false;
-            // for (int x = -30; x <= 30 && !bedFound; x++) {
-            //     for (int y = -30; y <= 30 && !bedFound; y++) {
-            //         for (int z = -30; z <= 30 && !bedFound; z++) {
-            //             BlockPos bp = new BlockPos(player.getX() + x, player.getY() + y, player.getZ() + z);
-            //             BlockEntity block = event.level.getBlockEntity(bp);
-            //             if (block instanceof BedBlockEntity bed) {
-            //                 LOGGER.info("WITHIN range of bed");
-            //                 bedFound = true;
-            //             }
-            //         }
-            //     }
-            // }
-
-            // Check if within 50 blocks of spawnpoint
-
-
             if (inspect.items != null) {
                 for (var item : inspect.items) {
                     ItemStack is = item.getItemStack(interaction.BuyerName);
@@ -281,7 +264,11 @@ public class TangiaMod {
             }
             if (inspect.messages != null) {
                 for (var message : inspect.messages) {
-                    message.message = message.message.replaceAll("\\$DISPLAYNAME", interaction.BuyerName);
+                    if (interaction.BuyerName == null || interaction.BuyerName == "") {
+                        message.message = message.message.replaceAll("\\$DISPLAYNAME", "someone");
+                    } else {
+                        message.message = message.message.replaceAll("\\$DISPLAYNAME", interaction.BuyerName);
+                    }
                     message.message = message.message.replaceAll("\\$PLAYERNAME", player.getName().getString());
                     if (message.toAllPlayers != null && message.toAllPlayers) {
                         for (var p : event.level.players()) {
@@ -319,6 +306,15 @@ public class TangiaMod {
                     MobEffectInstance mei = new MobEffectInstance(ForgeRegistries.MOB_EFFECTS.getValue(new ResourceLocation(statusComponent.statusID)), statusComponent.tickDuration);
                     player.addEffect(mei);
                 }
+            }
+            if (inspect.lightning) {
+                // Pick random block in radius around player
+                Random rand = new Random();
+                var xOffset = -3+rand.nextInt(4);
+                var zOffset = -3+rand.nextInt(4);
+                LightningBolt lb = new LightningBolt(EntityType.LIGHTNING_BOLT, event.level);
+                lb.setPos(player.getX()+xOffset, player.getY(), player.getZ()+zOffset);
+                event.level.addFreshEntity(lb);
             }
 
             // Ack the event
@@ -375,10 +371,10 @@ public class TangiaMod {
         public static void onInteractEvent(PlayerInteractEvent.RightClickItem event) {
             LOGGER.info("Got interaction event '{}'", event.toString());
             LOGGER.info("Got interaction item '{}'", event.getItemStack());
-//            var gameId = System.getenv("DEBUG");
-//            if (gameId == null) {
-//                return;
-//            }
+            var gameId = System.getenv("DEBUG");
+            if (gameId == null) {
+                return;
+            }
 
             // Spawn live TNT above someone's head
             // Play a delayed sound
@@ -536,32 +532,25 @@ public class TangiaMod {
                 if (textcomp != null) {
                     String thestring = textcomp.getString();
                     LOGGER.info("INTERACTED WITH CHEST BLOCK - '{}'", thestring);
-                    if (thestring.equals("pepechest")) {
-                        LOGGER.info("interactied with pepechest");
+                    if (thestring.startsWith("decoy")) {
                         Random rand = new Random();
                         int randomInt = rand.nextInt(2);
-                        LOGGER.info("GOT NUMBER {}", randomInt);
-                        if (randomInt == 1) {
-                            // Spawn creeper
-                            LOGGER.info("SPAWNING CREEPER HAHA!");
-                            Level world = event.getLevel();
-                            // Remove chest from position
-                            // world.removeBlockEntity(bp); // makes an empty default chest for some reason
-                            world.setBlock(bp, Blocks.AIR.defaultBlockState(), Block.getId(Blocks.AIR.defaultBlockState())); // breaks the chest
+                        Level world = event.getLevel();
+                        // Remove chest from position
+                        // world.removeBlockEntity(bp); // makes an empty default chest for some reason
+                        world.setBlock(bp, Blocks.AIR.defaultBlockState(), Block.getId(Blocks.AIR.defaultBlockState())); // breaks the chest
 
-                            // Spawn creeper
-                            Creeper creeper = new Creeper(EntityType.CREEPER, event.getLevel());
-                            creeper.setPos(event.getPos().getX(), event.getPos().getY() + 2, event.getPos().getZ());
-                            // CompoundTag nbt = creeper.serializeNBT();
-                            // nbt.putBoolean("powered", true);
-                            // creeper.deserializeNBT(nbt);
-                            creeper.setCustomNameVisible(true);
-                            var name = MutableComponent.create(new LiteralContents("Get naenae'd"));
-                            creeper.setCustomName(name);
-                            world.addFreshEntity(creeper);
-                        }
+                        // Spawn creeper
+                        Creeper creeper = new Creeper(EntityType.CREEPER, event.getLevel());
+                        creeper.setPos(event.getPos().getX(), event.getPos().getY(), event.getPos().getZ());
+                        // CompoundTag nbt = creeper.serializeNBT();
+                        // nbt.putBoolean("powered", true);
+                        // creeper.deserializeNBT(nbt);
+                        creeper.setCustomNameVisible(true);
+                        var name = MutableComponent.create(new LiteralContents(thestring.substring(5)));
+                        creeper.setCustomName(name);
+                        world.addFreshEntity(creeper);
                     }
-                    // see if we spawn a creeper instead
                 }
             }
         }

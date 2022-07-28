@@ -48,11 +48,13 @@ public class PrimedTntComponent {
             LOGGER.info("Spawning tnt");
             var player = event.level.getPlayerByUUID(this.playerUUID);
             this.stopListening = true;
-            var liveTNT = new PrimedTnt(event.level, player.getX()+this.xOffset, player.getY()+this.yOffset, player.getZ()+this.zOffset, null);
-            if (this.primeTicks != 0) {
-                liveTNT.setFuse(this.primeTicks);
+            if (player != null) {
+                var liveTNT = new PrimedTnt(event.level, player.getX()+this.xOffset, player.getY()+this.yOffset, player.getZ()+this.zOffset, null);
+                if (this.primeTicks != 0) {
+                    liveTNT.setFuse(this.primeTicks);
+                }
+                event.level.addFreshEntity(liveTNT);
             }
-            event.level.addFreshEntity(liveTNT);
         }
     }
 }

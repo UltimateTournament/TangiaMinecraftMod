@@ -11,4 +11,6 @@ public class InspectMetadata {
   public KitComponent[] kits;
 
   public PrimedTntComponent[] primedTNT;
+
+  public boolean lightning;
 }
