@@ -69,9 +69,7 @@ public class TangiaSDK {
     }
 
     public void ackEventAsync(EventResult e) {
-        try {
-            eventAckQueue.add(e);
-        } catch (IllegalStateException ex) {
+        if (!eventAckQueue.offer(e)) {
             LOGGER.warn("ack-queue is full!");
         }
     }

@@ -1,14 +1,10 @@
 package co.tangia.minecraftmod.chatcommands;
 
-import java.util.UUID;
-
 import co.tangia.minecraftmod.TangiaMod;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
-
 import com.mojang.logging.LogUtils;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -35,10 +31,12 @@ public class LoginCommand {
                         .executes(this::login))));
     }
 
-    private int login(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+    private int login(CommandContext<CommandSourceStack> ctx) {
         if (mod == null)
             return 0;
-        var player = ctx.getSource().getPlayerOrException();
+        var player = ctx.getSource().getPlayer();
+        if (player == null)
+            return 0;
         try {
             mod.login(player, StringArgumentType.getString(ctx, codeArg));
             player.sendSystemMessage(MutableComponent.create(new LiteralContents("You're logged in now")));

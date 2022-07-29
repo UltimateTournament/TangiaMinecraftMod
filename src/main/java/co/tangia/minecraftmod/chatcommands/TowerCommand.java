@@ -12,6 +12,8 @@ import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
 
 public class TowerCommand {
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     public void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(
             Commands.literal("tangia")
@@ -24,18 +26,28 @@ public class TowerCommand {
     }
 
     private int createTower(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        ServerPlayer player = ctx.getSource().getPlayerOrException();
-        var world = player.getCommandSenderWorld();
-        var tower = new TowerComponent(player.getX() + 2, player.getY(), player.getZ() + 2, 20);
-        tower.instantiate(world, true);
-        return Command.SINGLE_SUCCESS;
+        try {
+            ServerPlayer player = ctx.getSource().getPlayerOrException();
+            var world = player.getCommandSenderWorld();
+            var tower = new TowerComponent(player.getX() + 2, player.getY(), player.getZ() + 2, 20);
+            tower.instantiate(world, true);
+            return Command.SINGLE_SUCCESS;
+        } catch (Exception e) {
+            LOGGER.error("exception in command", e);
+            return 0;
+        }
     }
 
     private int template(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        ServerPlayer player = ctx.getSource().getPlayerOrException();
-        var world = player.getCommandSenderWorld();
-        var tower = new TowerComponent(player.getX() + 2, player.getY(), player.getZ() + 2, 0);
-        tower.instantiate(world, false);
-        return Command.SINGLE_SUCCESS;
+        try {
+            ServerPlayer player = ctx.getSource().getPlayerOrException();
+            var world = player.getCommandSenderWorld();
+            var tower = new TowerComponent(player.getX() + 2, player.getY(), player.getZ() + 2, 0);
+            tower.instantiate(world, false);
+            return Command.SINGLE_SUCCESS;
+        } catch (Exception e) {
+            LOGGER.error("exception in command", e);
+            return 0;
+        }
     }
 }

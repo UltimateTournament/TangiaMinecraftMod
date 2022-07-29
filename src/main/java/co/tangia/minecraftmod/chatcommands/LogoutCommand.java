@@ -36,9 +36,13 @@ public class LogoutCommand {
     private int logout(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         if (mod == null)
             return 0;
-        var player = ctx.getSource().getPlayerOrException();
-        mod.logout(player);
-        player.sendSystemMessage(MutableComponent.create(new LiteralContents("You're logged out now")));
+        try {
+            var player = ctx.getSource().getPlayerOrException();
+            mod.logout(player);
+            player.sendSystemMessage(MutableComponent.create(new LiteralContents("You're logged out now")));
+        } catch (Exception e) {
+            LOGGER.error("exception in command", e);
+        }
         return Command.SINGLE_SUCCESS;
     }
 }

@@ -61,7 +61,7 @@ public class TowerComponent {
         }
         LOGGER.info("tower built v2 {},{},{}", xStart, yStart, zStart);
         MinecraftForge.EVENT_BUS.register(this);
-        TowerLog.append(new TowerData(xStart,yStart,zStart,floors));
+        TowerLog.append(new TowerData(xStart, yStart, zStart, floors));
     }
 
     private void placeStartLever(Level level, int x, int y, int z) {
@@ -200,32 +200,41 @@ public class TowerComponent {
 
     @SubscribeEvent
     public void onTick(TickEvent.LevelTickEvent event) {
-        if (!lavaRising) {
-            return;
+        try {
+            if (!lavaRising) {
+                return;
+            }
+            long now = event.level.dayTime();
+            lavaY += (now - lastLavaEvent) * lavaPerGameTime;
+            if ((int) lavaY > lavaLastYBlock) {
+                LOGGER.info("LAVA IS RISING: " + lavaY);
+                setBlocksRandom(event.level,
+                    xStart + wallThick, xStart + width - wallThick,
+                    (int) lavaY, ((int) lavaY) + 1,
+                    zStart + wallThick, zStart + depth - wallThick,
+                    Blocks.LAVA.defaultBlockState(),
+                    0.2);
+                lavaLastYBlock = (int) lavaY;
+                this.lastLavaEvent = now;
+            }
+            if (lavaLastYBlock > yStart + height)
+                stopLavaRising();
+        } catch (Exception e) {
+            LOGGER.error("exception in onTick", e);
         }
-        long now = event.level.dayTime();
-        lavaY += (now - lastLavaEvent) * lavaPerGameTime;
-        if ((int) lavaY > lavaLastYBlock) {
-            LOGGER.info("LAVA IS RISING: " + lavaY);
-            setBlocksRandom(event.level,
-                xStart + wallThick, xStart + width - wallThick,
-                (int) lavaY, ((int) lavaY) + 1,
-                zStart + wallThick, zStart + depth - wallThick,
-                Blocks.LAVA.defaultBlockState(),
-                0.2);
-            lavaLastYBlock = (int) lavaY;
-            this.lastLavaEvent = now;
-        }
-        if (lavaLastYBlock > yStart + height)
-            stopLavaRising();
     }
 
     @SubscribeEvent
     public void onLever(PlayerInteractEvent.RightClickBlock rcbEvent) {
-        if (leverPos == null)
-            return;
-        if (rcbEvent.getPos().equals(leverPos)) {
-            startLavaRising(rcbEvent.getLevel());
+        try {
+            if (leverPos == null)
+                return;
+            if (leverPos.equals(rcbEvent.getPos())) {
+                startLavaRising(rcbEvent.getLevel());
+            }
+
+        } catch (Exception e) {
+            LOGGER.error("exception in onLever", e);
         }
     }
 }

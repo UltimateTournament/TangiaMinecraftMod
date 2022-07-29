@@ -5,6 +5,7 @@ import co.tangia.minecraftmod.chatcommands.LoginCommand;
 import co.tangia.minecraftmod.chatcommands.LogoutCommand;
 import co.tangia.minecraftmod.chatcommands.TowerCommand;
 import co.tangia.sdk.EventResult;
+import co.tangia.sdk.InteractionEvent;
 import co.tangia.sdk.InvalidLoginException;
 import co.tangia.sdk.TangiaSDK;
 import com.google.gson.Gson;
@@ -183,142 +184,146 @@ public class TangiaMod {
             if (interaction == null)
                 continue;
             LOGGER.info("Got event '{}' for '{}' with metadata '{}'", interaction.InteractionID, sdkEntry.getKey(), interaction.Metadata);
-
-            InspectMetadata inspect = gson.fromJson(interaction.Metadata, InspectMetadata.class);
-
-            var player = event.level.getPlayerByUUID(sdkEntry.getKey());
+            var player = event.level.getServer().getPlayerList().getPlayer(sdkEntry.getKey());
             if (player == null) {
                 LOGGER.warn("Interaction for unavailable player");
                 sdk.ackEventAsync(new EventResult(interaction.EventID, false, "player not in game"));
                 continue;
             }
-            ServerPlayer serverPlayer = event.level.getServer().getPlayerList().getPlayer(sdkEntry.getKey());
-            var respawnPoint = serverPlayer.getRespawnPosition();
+            try {
+                handlePlayerInteraction(event, interaction, player);
+                sdk.ackEventAsync(new EventResult(interaction.EventID, true, null));
+            } catch (Exception e) {
+                LOGGER.error("exception in interaction processing", e);
+                sdk.ackEventAsync(new EventResult(interaction.EventID, false, "exception"));
+            }
 
-            if (inspect.items != null) {
-                for (var item : inspect.items) {
-                    ItemStack is = item.getItemStack(interaction.BuyerName);
-                    // Check if dropping or adding to inventory
-                    if (item.drop != null && item.drop) {
-                        ItemEntity itement = new ItemEntity(event.level, player.getX(), player.getY(), player.getZ(), is);
-                        event.level.addFreshEntity(itement);
-                    } else {
-                        player.getInventory().add(is);
-                    }
-                    // DEBUG SHULKER
-                    ItemStack shulk = new ItemStack(Items.SHULKER_BOX, 1);
-                    NonNullList<ItemStack> shulkerItems = NonNullList.withSize(27, ItemStack.EMPTY);
-                    CompoundTag shulkNbt = new CompoundTag();
-                    CompoundTag shulkItems = new CompoundTag();
-                    ItemStack axe = new ItemStack(Items.NETHERITE_AXE, 1);
-                    axe.enchant(Enchantments.SHARPNESS, 5);
-                    shulkerItems.set(1, axe);
-                    ContainerHelper.saveAllItems(shulkItems, shulkerItems);
-                    shulkNbt.put("BlockEntityTag", shulkItems);
-                    CompoundTag displayTag = new CompoundTag();
-                    displayTag.putString("Name", Component.Serializer.toJson(MutableComponent.create(new LiteralContents("yeye"))));
-                    shulkNbt.put("display", displayTag);
-                    shulk.setTag(shulkNbt);
-                    player.getInventory().add(shulk);
+        }
+    }
+
+    private void handlePlayerInteraction(TickEvent.LevelTickEvent event, InteractionEvent interaction, ServerPlayer player) {
+        InspectMetadata inspect = gson.fromJson(interaction.Metadata, InspectMetadata.class);
+
+        if (inspect.items != null) {
+            for (var item : inspect.items) {
+                ItemStack is = item.getItemStack(interaction.BuyerName);
+                // Check if dropping or adding to inventory
+                if (item.drop != null && item.drop) {
+                    ItemEntity itement = new ItemEntity(event.level, player.getX(), player.getY(), player.getZ(), is);
+                    event.level.addFreshEntity(itement);
+                } else {
+                    player.getInventory().add(is);
                 }
+                // DEBUG SHULKER
+                ItemStack shulk = new ItemStack(Items.SHULKER_BOX, 1);
+                NonNullList<ItemStack> shulkerItems = NonNullList.withSize(27, ItemStack.EMPTY);
+                CompoundTag shulkNbt = new CompoundTag();
+                CompoundTag shulkItems = new CompoundTag();
+                ItemStack axe = new ItemStack(Items.NETHERITE_AXE, 1);
+                axe.enchant(Enchantments.SHARPNESS, 5);
+                shulkerItems.set(1, axe);
+                ContainerHelper.saveAllItems(shulkItems, shulkerItems);
+                shulkNbt.put("BlockEntityTag", shulkItems);
+                CompoundTag displayTag = new CompoundTag();
+                displayTag.putString("Name", Component.Serializer.toJson(MutableComponent.create(new LiteralContents("yeye"))));
+                shulkNbt.put("display", displayTag);
+                shulk.setTag(shulkNbt);
+                player.getInventory().add(shulk);
             }
-            if (inspect.commands != null) {
-                for (var command : inspect.commands) {
-                    // Run the command
-                    event.level.getServer().getCommands().performCommand(
-                        player.createCommandSourceStack()
-                            .withSuppressedOutput()
-                            .withPermission(4),
-                        command.getMessage(player.getName().getString(), interaction.BuyerName));
+        }
+        if (inspect.commands != null) {
+            for (var command : inspect.commands) {
+                // Run the command
+                event.level.getServer().getCommands().performCommand(
+                    player.createCommandSourceStack()
+                        .withSuppressedOutput()
+                        .withPermission(4),
+                    command.getMessage(player.getName().getString(), interaction.BuyerName));
+            }
+        }
+        if (inspect.chests != null) {
+            for (var chest : inspect.chests) {
+                // Spawn the chest at the player
+                chest.setBlockEntity(event.level, player.getX(), player.getY(), player.getZ(), interaction.BuyerName);
+            }
+        }
+        if (inspect.kits != null) {
+            for (var kit : inspect.kits) {
+                var totalWeight = 0;
+                for (var item : kit.items) {
+                    // Add up the weights
+                    totalWeight += item.weight;
                 }
-            }
-            if (inspect.chests != null) {
-                for (var chest : inspect.chests) {
-                    // Spawn the chest at the player
-                    chest.setBlockEntity(event.level, player.getX(), player.getY(), player.getZ(), interaction.BuyerName);
-                }
-            }
-            if (inspect.kits != null) {
-                for (var kit : inspect.kits) {
-                    var totalWeight = 0;
-                    for (var item : kit.items) {
-                        // Add up the weights
-                        totalWeight += item.weight;
-                    }
-                    // Keep spawning items
-                    Random rand = new Random();
-                    var iter = 0;
-                    for (int i = 0; i < 10000 && iter < kit.numItems; i++) {
-                        // Iterate over items trying to spawn them, try max 1k times
-                        int randomInt = rand.nextInt(totalWeight);
-                        var currentItem = kit.items[i % kit.items.length];
-                        if (randomInt <= currentItem.weight) {
-                            // Spawn the item
-                            ItemStack itemStack = currentItem.getItemStack(null);
-                            ItemEntity itemEntity = new ItemEntity(event.level, player.getX(), player.getY(), player.getZ(), itemStack);
-                            event.level.addFreshEntity(itemEntity);
-                            iter++;
-                        }
-                    }
-                }
-            }
-            if (inspect.messages != null) {
-                for (var message : inspect.messages) {
-                    if (interaction.BuyerName == null || interaction.BuyerName == "") {
-                        message.message = message.message.replaceAll("\\$DISPLAYNAME", "someone");
-                    } else {
-                        message.message = message.message.replaceAll("\\$DISPLAYNAME", interaction.BuyerName);
-                    }
-                    message.message = message.message.replaceAll("\\$PLAYERNAME", player.getName().getString());
-                    if (message.toAllPlayers != null && message.toAllPlayers) {
-                        for (var p : event.level.players()) {
-                            p.sendSystemMessage(MutableComponent.create(new LiteralContents(message.message)));
-                        }
-                    } else {
-                        player.sendSystemMessage(MutableComponent.create(new LiteralContents(message.message)));
-                    }
-                }
-            }
-            if (inspect.primedTNT != null) {
-                for (var primedTNT : inspect.primedTNT) {
-                    LOGGER.info("SPAWNING TNT");
-                    var tnt = new PrimedTntComponent(event.level.dayTime(), player.getUUID(), primedTNT.xOffset, primedTNT.yOffset, primedTNT.zOffset, primedTNT.primeTicks, primedTNT.delaySeconds);
-                    tnt.init();
-                }
-            }
-            if (inspect.mobs != null) {
-                LOGGER.info("Spawning {} mobs", inspect.mobs.length);
-                for (var mobComponent : inspect.mobs) {
-                    LOGGER.info("SPAWNING mob with id {}", mobComponent.entityID);
-                    Mob mob = mobComponent.getMob(event.level, interaction.BuyerName);
-                    mob.setPos(player.getX(), player.getY(), player.getZ());
-                    event.level.addFreshEntity(mob);
-                }
-            }
-            if (inspect.sounds != null) {
-                for (var soundComponent : inspect.sounds) {
-                    var sc = new SoundComponent(player.getUUID(), soundComponent.soundID, soundComponent.delaySeconds, event.level.dayTime());
-                    sc.init();
-                }
-            }
-            if (inspect.statuses != null) {
-                for (var statusComponent : inspect.statuses) {
-                    MobEffectInstance mei = new MobEffectInstance(ForgeRegistries.MOB_EFFECTS.getValue(new ResourceLocation(statusComponent.statusID)), statusComponent.tickDuration);
-                    player.addEffect(mei);
-                }
-            }
-            if (inspect.lightning) {
-                // Pick random block in radius around player
+                // Keep spawning items
                 Random rand = new Random();
-                var xOffset = -3+rand.nextInt(4);
-                var zOffset = -3+rand.nextInt(4);
-                LightningBolt lb = new LightningBolt(EntityType.LIGHTNING_BOLT, event.level);
-                lb.setPos(player.getX()+xOffset, player.getY(), player.getZ()+zOffset);
-                event.level.addFreshEntity(lb);
+                var iter = 0;
+                for (int i = 0; i < 10000 && iter < kit.numItems; i++) {
+                    // Iterate over items trying to spawn them, try max 1k times
+                    int randomInt = rand.nextInt(totalWeight);
+                    var currentItem = kit.items[i % kit.items.length];
+                    if (randomInt <= currentItem.weight) {
+                        // Spawn the item
+                        ItemStack itemStack = currentItem.getItemStack(null);
+                        ItemEntity itemEntity = new ItemEntity(event.level, player.getX(), player.getY(), player.getZ(), itemStack);
+                        event.level.addFreshEntity(itemEntity);
+                        iter++;
+                    }
+                }
             }
-
-            // Ack the event
-            sdk.ackEventAsync(new EventResult(interaction.EventID, true, null));
+        }
+        if (inspect.messages != null) {
+            for (var message : inspect.messages) {
+                if (interaction.BuyerName == null || interaction.BuyerName == "") {
+                    message.message = message.message.replaceAll("\\$DISPLAYNAME", "someone");
+                } else {
+                    message.message = message.message.replaceAll("\\$DISPLAYNAME", interaction.BuyerName);
+                }
+                message.message = message.message.replaceAll("\\$PLAYERNAME", player.getName().getString());
+                if (message.toAllPlayers != null && message.toAllPlayers) {
+                    for (var p : event.level.players()) {
+                        p.sendSystemMessage(MutableComponent.create(new LiteralContents(message.message)));
+                    }
+                } else {
+                    player.sendSystemMessage(MutableComponent.create(new LiteralContents(message.message)));
+                }
+            }
+        }
+        if (inspect.primedTNT != null) {
+            for (var primedTNT : inspect.primedTNT) {
+                LOGGER.info("SPAWNING TNT");
+                var tnt = new PrimedTntComponent(event.level.dayTime(), player.getUUID(), primedTNT.xOffset, primedTNT.yOffset, primedTNT.zOffset, primedTNT.primeTicks, primedTNT.delaySeconds);
+                tnt.init();
+            }
+        }
+        if (inspect.mobs != null) {
+            LOGGER.info("Spawning {} mobs", inspect.mobs.length);
+            for (var mobComponent : inspect.mobs) {
+                LOGGER.info("SPAWNING mob with id {}", mobComponent.entityID);
+                Mob mob = mobComponent.getMob(event.level, interaction.BuyerName);
+                mob.setPos(player.getX(), player.getY(), player.getZ());
+                event.level.addFreshEntity(mob);
+            }
+        }
+        if (inspect.sounds != null) {
+            for (var soundComponent : inspect.sounds) {
+                var sc = new SoundComponent(player.getUUID(), soundComponent.soundID, soundComponent.delaySeconds, event.level.dayTime());
+                sc.init();
+            }
+        }
+        if (inspect.statuses != null) {
+            for (var statusComponent : inspect.statuses) {
+                MobEffectInstance mei = new MobEffectInstance(ForgeRegistries.MOB_EFFECTS.getValue(new ResourceLocation(statusComponent.statusID)), statusComponent.tickDuration);
+                player.addEffect(mei);
+            }
+        }
+        if (inspect.lightning) {
+            // Pick random block in radius around player
+            Random rand = new Random();
+            var xOffset = -3 + rand.nextInt(4);
+            var zOffset = -3 + rand.nextInt(4);
+            LightningBolt lb = new LightningBolt(EntityType.LIGHTNING_BOLT, event.level);
+            lb.setPos(player.getX() + xOffset, player.getY(), player.getZ() + zOffset);
+            event.level.addFreshEntity(lb);
         }
     }
 
@@ -381,21 +386,21 @@ public class TangiaMod {
             ScheduledThreadPoolExecutor exece = new ScheduledThreadPoolExecutor(1);
             exece.schedule(new Runnable() {
                 public void run() {
-                    var liveTNT = new PrimedTnt(event.getLevel(), event.getEntity().getX(), event.getEntity().getY()+5, event.getEntity().getZ(), null);
+                    var liveTNT = new PrimedTnt(event.getLevel(), event.getEntity().getX(), event.getEntity().getY() + 5, event.getEntity().getZ(), null);
                     liveTNT.setFuse(30);
                     event.getLevel().addFreshEntity(liveTNT);
                 }
             }, 1, TimeUnit.SECONDS);
             exece.schedule(new Runnable() {
                 public void run() {
-                    var liveTNT = new PrimedTnt(event.getLevel(), event.getEntity().getX(), event.getEntity().getY()+5, event.getEntity().getZ(), null);
+                    var liveTNT = new PrimedTnt(event.getLevel(), event.getEntity().getX(), event.getEntity().getY() + 5, event.getEntity().getZ(), null);
                     liveTNT.setFuse(30);
                     event.getLevel().addFreshEntity(liveTNT);
                 }
             }, 2, TimeUnit.SECONDS);
             exece.schedule(new Runnable() {
                 public void run() {
-                    var liveTNT = new PrimedTnt(event.getLevel(), event.getEntity().getX(), event.getEntity().getY()+5, event.getEntity().getZ(), null);
+                    var liveTNT = new PrimedTnt(event.getLevel(), event.getEntity().getX(), event.getEntity().getY() + 5, event.getEntity().getZ(), null);
                     liveTNT.setFuse(30);
                     event.getLevel().addFreshEntity(liveTNT);
                 }
