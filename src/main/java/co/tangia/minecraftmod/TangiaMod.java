@@ -10,7 +10,6 @@ import co.tangia.sdk.InvalidLoginException;
 import co.tangia.sdk.TangiaSDK;
 import com.google.gson.Gson;
 import com.mojang.logging.LogUtils;
-import net.minecraft.client.renderer.entity.TntRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
@@ -81,6 +80,9 @@ public class TangiaMod {
     private static final Logger LOGGER = LogUtils.getLogger();
     private final Gson gson = new Gson();
     private final Map<UUID, TangiaSDK> playerSDKs = new HashMap<>();
+    private final String gameVersion = "0.0.1";
+    private final String tangiaUrl = "STAGING".equals(System.getenv("TANGIA_ENV")) ? TangiaSDK.STAGING_URL : TangiaSDK.PROD_URL;
+    private final String gameId = System.getenv("TANGIA_GAME_ID");
 
     public TangiaMod() {
         // Register the setup method for modloading
@@ -118,8 +120,8 @@ public class TangiaMod {
     // You can use SubscribeEvent and let the Event Bus discover methods to call
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
-        // Do something when the server starts
-        LOGGER.info("HELLO from server starting");
+        LOGGER.info("Tangia Mod starting");
+        ModPersistence.load();
     }
 
     @SubscribeEvent
@@ -138,13 +140,12 @@ public class TangiaMod {
     }
 
     public void login(Player player, String code) throws InvalidLoginException, IOException {
-        var gameId = System.getenv("TANGIA_GAME_ID");
         if (gameId == null) {
             LOGGER.warn("TANGIA_GAME_ID not set");
             throw new InvalidLoginException();
         }
         var id = player.getUUID();
-        var sdk = new TangiaSDK(gameId, "0.0.1", "STAGING".equals(System.getenv("TANGIA_ENV")) ? TangiaSDK.STAGING_URL : TangiaSDK.PROD_URL);
+        var sdk = new TangiaSDK(gameId, gameVersion, tangiaUrl);
         sdk.login(code);
         synchronized (playerSDKs) {
             if (playerSDKs.get(id) != null)
@@ -152,9 +153,11 @@ public class TangiaMod {
             playerSDKs.put(id, sdk);
         }
         sdk.startEventPolling();
+        ModPersistence.data.sessions().put(id, new ModPersistenceData.PlayerSession(sdk.getSessionKey()));
+        ModPersistence.store();
     }
 
-    public void logout(Player player) {
+    public void logout(Player player, boolean removeSession) {
         synchronized (playerSDKs) {
             var id = player.getUUID();
             var sdk = playerSDKs.get(id);
@@ -162,14 +165,37 @@ public class TangiaMod {
                 sdk.stopEventPolling();
                 playerSDKs.remove(id);
             }
+            if (removeSession) {
+                ModPersistence.data.sessions().remove(player.getUUID());
+                ModPersistence.store();
+            }
         }
     }
 
     @SubscribeEvent
     public void onJoin(EntityJoinLevelEvent event) {
-        if (event.getEntity() instanceof Player player) {
-            LOGGER.info("Player with ID {} joined", player.getId());
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
         }
+        LOGGER.info("Player with UUID {} joined", player.getUUID());
+        if (playerSDKs.get(player.getUUID()) != null) {
+            return;
+        }
+        var session = ModPersistence.data.sessions().get(player.getUUID());
+        if (session != null) {
+            var sdk = new TangiaSDK(gameId, gameVersion, tangiaUrl);
+            sdk.setSessionKey(session.sessionToken());
+            playerSDKs.put(player.getUUID(), sdk);
+            sdk.startEventPolling();
+            LOGGER.info("Tangia session restored for Player with UUID {}", player.getUUID());
+            player.sendSystemMessage(MutableComponent.create(new LiteralContents("We've logged you back into your Tangia account")));
+        }
+    }
+
+    @SubscribeEvent
+    public void onPlayerLeave(PlayerEvent.PlayerLoggedOutEvent event) {
+        // TODO figure out if we get a stable identity for players so we can keep their session when they come back
+        logout(event.getEntity(), false);
     }
 
     @SubscribeEvent
@@ -325,12 +351,6 @@ public class TangiaMod {
             lb.setPos(player.getX() + xOffset, player.getY(), player.getZ() + zOffset);
             event.level.addFreshEntity(lb);
         }
-    }
-
-    @SubscribeEvent
-    public void onPlayerLeave(PlayerEvent.PlayerLoggedOutEvent event) {
-        // TODO figure out if we get a stable identity for players so we can keep their session when they come back
-        logout(event.getEntity());
     }
 
     @Mod.EventBusSubscriber(modid = "tangia", bus = Bus.FORGE, value = Dist.CLIENT)

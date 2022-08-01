@@ -38,7 +38,7 @@ public class LogoutCommand {
             return 0;
         try {
             var player = ctx.getSource().getPlayerOrException();
-            mod.logout(player);
+            mod.logout(player, true);
             player.sendSystemMessage(MutableComponent.create(new LiteralContents("You're logged out now")));
         } catch (Exception e) {
             LOGGER.error("exception in command", e);
