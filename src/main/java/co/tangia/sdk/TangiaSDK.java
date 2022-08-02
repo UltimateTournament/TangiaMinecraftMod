@@ -49,9 +49,6 @@ public class TangiaSDK {
     }
 
     public void startEventPolling() {
-        if (!eventPoller.isStopped()) {
-            return;
-        }
         eventPoller.start();
     }
 
@@ -121,10 +118,6 @@ public class TangiaSDK {
             } catch (IOException e) {
                 LOGGER.warn("couldn't notify stop playing: " + e.getMessage());
             }
-        }
-
-        public boolean isStopped() {
-            return stopped;
         }
 
         private void pollEvents() throws InterruptedException {
