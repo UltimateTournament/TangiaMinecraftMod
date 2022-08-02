@@ -17,6 +17,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.contents.LiteralContents;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.commands.WhitelistCommand;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.ContainerHelper;
@@ -241,20 +242,20 @@ public class TangiaMod {
                     player.getInventory().add(is);
                 }
                 // DEBUG SHULKER
-                ItemStack shulk = new ItemStack(Items.SHULKER_BOX, 1);
-                NonNullList<ItemStack> shulkerItems = NonNullList.withSize(27, ItemStack.EMPTY);
-                CompoundTag shulkNbt = new CompoundTag();
-                CompoundTag shulkItems = new CompoundTag();
-                ItemStack axe = new ItemStack(Items.NETHERITE_AXE, 1);
-                axe.enchant(Enchantments.SHARPNESS, 5);
-                shulkerItems.set(1, axe);
-                ContainerHelper.saveAllItems(shulkItems, shulkerItems);
-                shulkNbt.put("BlockEntityTag", shulkItems);
-                CompoundTag displayTag = new CompoundTag();
-                displayTag.putString("Name", Component.Serializer.toJson(MutableComponent.create(new LiteralContents("yeye"))));
-                shulkNbt.put("display", displayTag);
-                shulk.setTag(shulkNbt);
-                player.getInventory().add(shulk);
+                // ItemStack shulk = new ItemStack(Items.SHULKER_BOX, 1);
+                // NonNullList<ItemStack> shulkerItems = NonNullList.withSize(27, ItemStack.EMPTY);
+                // CompoundTag shulkNbt = new CompoundTag();
+                // CompoundTag shulkItems = new CompoundTag();
+                // ItemStack axe = new ItemStack(Items.NETHERITE_AXE, 1);
+                // axe.enchant(Enchantments.SHARPNESS, 5);
+                // shulkerItems.set(1, axe);
+                // ContainerHelper.saveAllItems(shulkItems, shulkerItems);
+                // shulkNbt.put("BlockEntityTag", shulkItems);
+                // CompoundTag displayTag = new CompoundTag();
+                // displayTag.putString("Name", Component.Serializer.toJson(MutableComponent.create(new LiteralContents("yeye"))));
+                // shulkNbt.put("display", displayTag);
+                // shulk.setTag(shulkNbt);
+                // player.getInventory().add(shulk);
             }
         }
         if (inspect.commands != null) {
@@ -350,6 +351,12 @@ public class TangiaMod {
             LightningBolt lb = new LightningBolt(EntityType.LIGHTNING_BOLT, event.level);
             lb.setPos(player.getX() + xOffset, player.getY(), player.getZ() + zOffset);
             event.level.addFreshEntity(lb);
+        }
+        if (inspect.whitelist) {
+            // Whitelist the display name if it exists, and whitelist is enabled
+            if (event.level.getServer().isEnforceWhitelist()) {
+                var wlc = new WhitelistCommand();
+            }
         }
     }
 

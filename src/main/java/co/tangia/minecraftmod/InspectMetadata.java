@@ -13,4 +13,5 @@ public class InspectMetadata {
   public PrimedTntComponent[] primedTNT;
 
   public boolean lightning;
+  public boolean whitelist;
 }
