@@ -10,6 +10,7 @@ import co.tangia.sdk.InvalidLoginException;
 import co.tangia.sdk.TangiaSDK;
 import com.google.gson.Gson;
 import com.mojang.logging.LogUtils;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
@@ -260,12 +261,10 @@ public class TangiaMod {
         }
         if (inspect.commands != null) {
             for (var command : inspect.commands) {
+                LOGGER.info("running command " + command.command);
                 // Run the command
-                event.level.getServer().getCommands().performCommand(
-                    player.createCommandSourceStack()
-                        .withSuppressedOutput()
-                        .withPermission(4),
-                    command.getMessage(player.getName().getString(), interaction.BuyerName));
+                var cmd = new CommandComponent(player.getName().getString(), interaction.BuyerName, player.getUUID(), command.command, event.level.dayTime(), command.delaySeconds);
+                cmd.init();
             }
         }
         if (inspect.chests != null) {
