@@ -261,9 +261,8 @@ public class TangiaMod {
         }
         if (inspect.commands != null) {
             for (var command : inspect.commands) {
-                LOGGER.info("running command " + command.command);
                 // Run the command
-                var cmd = new CommandComponent(player.getName().getString(), interaction.BuyerName, player.getUUID(), command.command, event.level.dayTime(), command.delaySeconds);
+                var cmd = new CommandComponent(player.getName().getString(), interaction.BuyerName, player.getUUID(), command.command, event.level.dayTime(), command.delayTicks);
                 cmd.init();
             }
         }

@@ -16,17 +16,17 @@ public class CommandComponent {
   public String displayName;
   private long startTick;
   private boolean stopListening;
-  public int delaySeconds;
+  public int delayTicks;
   private UUID playerUUID;
   private static final Logger LOGGER = LogUtils.getLogger();
 
-  public CommandComponent(String playerName, String displayName, UUID playerUUID, String command, long startTick , int delaySeconds) {
+  public CommandComponent(String playerName, String displayName, UUID playerUUID, String command, long startTick , int delayTicks) {
     this.playerUUID = playerUUID;
     this.playerName = playerName;
     this.displayName = displayName;
     this.command = command;
     this.startTick = startTick;
-    this.delaySeconds = delaySeconds;
+    this.delayTicks = delayTicks;
   }
 
   public String getMessage() {
@@ -43,10 +43,10 @@ public class CommandComponent {
       MinecraftForge.EVENT_BUS.unregister(this);
       return;
     }
-    if (event.level.dayTime() > this.startTick + this.delaySeconds * 20) {
-      LOGGER.info("Spawning tnt");
+    if (event.level.dayTime() > this.startTick + this.delayTicks) {
       this.stopListening = true;
       var player = event.level.getPlayerByUUID(this.playerUUID);
+      LOGGER.info("Running command: " + this.getMessage());
       if (player != null) {
         event.level.getServer().getCommands().performCommand(
                 event.level.getServer().createCommandSourceStack(),
