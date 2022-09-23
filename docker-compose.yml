@@ -7,8 +7,8 @@ services:
       - 25565:25565
     environment:
       EULA: "TRUE"
-      VERSION: "1.19"
-      FORGEVERSION: "41.1.0"
+      VERSION: "1.18.2"
+      FORGEVERSION: "40.1.68"
       TYPE: FORGE
       MEMORY: ""
       JVM_XX_OPTS: "-XX:MaxRAMPercentage=75"

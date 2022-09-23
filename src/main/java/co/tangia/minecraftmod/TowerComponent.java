@@ -199,16 +199,16 @@ public class TowerComponent {
     }
 
     @SubscribeEvent
-    public void onTick(TickEvent.LevelTickEvent event) {
+    public void onTick(TickEvent.WorldTickEvent event) {
         try {
             if (!lavaRising) {
                 return;
             }
-            long now = event.level.dayTime();
+            long now = event.world.dayTime();
             lavaY += (now - lastLavaEvent) * lavaPerGameTime;
             if ((int) lavaY > lavaLastYBlock) {
                 LOGGER.info("LAVA IS RISING: " + lavaY);
-                setBlocksRandom(event.level,
+                setBlocksRandom(event.world,
                     xStart + wallThick, xStart + width - wallThick,
                     (int) lavaY, ((int) lavaY) + 1,
                     zStart + wallThick, zStart + depth - wallThick,
@@ -230,7 +230,7 @@ public class TowerComponent {
             if (leverPos == null)
                 return;
             if (leverPos.equals(rcbEvent.getPos())) {
-                startLavaRising(rcbEvent.getLevel());
+                startLavaRising(rcbEvent.getWorld());
             }
 
         } catch (Exception e) {

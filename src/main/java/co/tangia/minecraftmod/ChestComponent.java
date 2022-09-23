@@ -1,8 +1,7 @@
 package co.tangia.minecraftmod;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.contents.LiteralContents;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
@@ -17,9 +16,9 @@ public class ChestComponent {
     ChestBlockEntity cbe = new ChestBlockEntity(bp, Blocks.CHEST.defaultBlockState());
     if (this.chestName != null) {
       if (displayName != null) {
-        cbe.setCustomName(MutableComponent.create(new LiteralContents(this.chestName.replaceAll("\\$DISPLAYNAME", displayName))));
+        cbe.setCustomName(new TextComponent(this.chestName.replaceAll("\\$DISPLAYNAME", displayName)));
       } else {
-        cbe.setCustomName(MutableComponent.create(new LiteralContents(this.chestName)));
+        cbe.setCustomName(new TextComponent(this.chestName));
       }
     }
     if (this.items != null) {
