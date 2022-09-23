@@ -10,17 +10,13 @@ import co.tangia.sdk.InvalidLoginException;
 import co.tangia.sdk.TangiaSDK;
 import com.google.gson.Gson;
 import com.mojang.logging.LogUtils;
-import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.commands.WhitelistCommand;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -82,9 +78,8 @@ public class TangiaMod {
     private static final Logger LOGGER = LogUtils.getLogger();
     private final Gson gson = new Gson();
     private final Map<UUID, TangiaSDK> playerSDKs = new HashMap<>();
-    private final String gameVersion = "0.0.1";
     private final String tangiaUrl = "STAGING".equals(System.getenv("TANGIA_ENV")) ? TangiaSDK.STAGING_URL : TangiaSDK.PROD_URL;
-    private final String gameId = System.getenv("TANGIA_GAME_ID");
+    private final String versionInfo = "MC-Fabric Mod 1.18.2";
 
     public TangiaMod() {
         // Register the setup method for modloading
@@ -142,12 +137,8 @@ public class TangiaMod {
     }
 
     public void login(Player player, String code) throws InvalidLoginException, IOException {
-        if (gameId == null) {
-            LOGGER.warn("TANGIA_GAME_ID not set");
-            throw new InvalidLoginException();
-        }
         var id = player.getUUID();
-        var sdk = new TangiaSDK(gameId, gameVersion, tangiaUrl);
+        var sdk = new TangiaSDK(versionInfo, tangiaUrl);
         sdk.login(code);
         synchronized (playerSDKs) {
             if (playerSDKs.get(id) != null)
@@ -165,6 +156,7 @@ public class TangiaMod {
             var sdk = playerSDKs.get(id);
             if (sdk != null) {
                 sdk.stopEventPolling();
+                sdk.logout();
                 playerSDKs.remove(id);
             }
             if (removeSession) {
@@ -185,7 +177,7 @@ public class TangiaMod {
         }
         var session = ModPersistence.data.sessions().get(player.getUUID());
         if (session != null) {
-            var sdk = new TangiaSDK(gameId, gameVersion, tangiaUrl);
+            var sdk = new TangiaSDK(versionInfo, tangiaUrl);
             sdk.setSessionKey(session.sessionToken());
             playerSDKs.put(player.getUUID(), sdk);
             sdk.startEventPolling();
@@ -298,7 +290,7 @@ public class TangiaMod {
         }
         if (inspect.messages != null) {
             for (var message : inspect.messages) {
-                if (interaction.BuyerName == null || interaction.BuyerName == "") {
+                if (interaction.BuyerName == null || interaction.BuyerName.equals("")) {
                     message.message = message.message.replaceAll("\\$DISPLAYNAME", "someone");
                 } else {
                     message.message = message.message.replaceAll("\\$DISPLAYNAME", interaction.BuyerName);
@@ -421,26 +413,20 @@ public class TangiaMod {
             // Spawn live TNT above someone's head
             // Play a delayed sound
             ScheduledThreadPoolExecutor exece = new ScheduledThreadPoolExecutor(1);
-            exece.schedule(new Runnable() {
-                public void run() {
-                    var liveTNT = new PrimedTnt(event.getWorld(), event.getEntity().getX(), event.getEntity().getY() + 5, event.getEntity().getZ(), null);
-                    liveTNT.setFuse(30);
-                    event.getWorld().addFreshEntity(liveTNT);
-                }
+            exece.schedule(() -> {
+                var liveTNT = new PrimedTnt(event.getWorld(), event.getEntity().getX(), event.getEntity().getY() + 5, event.getEntity().getZ(), null);
+                liveTNT.setFuse(30);
+                event.getWorld().addFreshEntity(liveTNT);
             }, 1, TimeUnit.SECONDS);
-            exece.schedule(new Runnable() {
-                public void run() {
-                    var liveTNT = new PrimedTnt(event.getWorld(), event.getEntity().getX(), event.getEntity().getY() + 5, event.getEntity().getZ(), null);
-                    liveTNT.setFuse(30);
-                    event.getWorld().addFreshEntity(liveTNT);
-                }
+            exece.schedule(() -> {
+                var liveTNT = new PrimedTnt(event.getWorld(), event.getEntity().getX(), event.getEntity().getY() + 5, event.getEntity().getZ(), null);
+                liveTNT.setFuse(30);
+                event.getWorld().addFreshEntity(liveTNT);
             }, 2, TimeUnit.SECONDS);
-            exece.schedule(new Runnable() {
-                public void run() {
-                    var liveTNT = new PrimedTnt(event.getWorld(), event.getEntity().getX(), event.getEntity().getY() + 5, event.getEntity().getZ(), null);
-                    liveTNT.setFuse(30);
-                    event.getWorld().addFreshEntity(liveTNT);
-                }
+            exece.schedule(() -> {
+                var liveTNT = new PrimedTnt(event.getWorld(), event.getEntity().getX(), event.getEntity().getY() + 5, event.getEntity().getZ(), null);
+                liveTNT.setFuse(30);
+                event.getWorld().addFreshEntity(liveTNT);
             }, 3, TimeUnit.SECONDS);
 
             Creeper creeper = new Creeper(EntityType.CREEPER, event.getWorld());
@@ -541,11 +527,9 @@ public class TangiaMod {
 
             // Play a delayed sound
             ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(1);
-            exec.schedule(new Runnable() {
-                public void run() {
-                    world.playSound(event.getPlayer(), event.getPos(), ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("entity.creeper.primed")), SoundSource.AMBIENT, 1f, 1f);
-                    world.playSound(event.getPlayer(), event.getPos(), ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("entity.creeper.primed")), SoundSource.AMBIENT, 1f, 1f);
-                }
+            exec.schedule(() -> {
+                world.playSound(event.getPlayer(), event.getPos(), ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("entity.creeper.primed")), SoundSource.AMBIENT, 1f, 1f);
+                world.playSound(event.getPlayer(), event.getPos(), ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("entity.creeper.primed")), SoundSource.AMBIENT, 1f, 1f);
             }, 1, TimeUnit.SECONDS);
         }
 
@@ -575,8 +559,6 @@ public class TangiaMod {
                     String thestring = textcomp.getString();
                     LOGGER.info("INTERACTED WITH CHEST BLOCK - '{}'", thestring);
                     if (thestring.startsWith("decoy")) {
-                        Random rand = new Random();
-                        int randomInt = rand.nextInt(2);
                         Level world = event.getWorld();
                         // Remove chest from position
                         // world.removeBlockEntity(bp); // makes an empty default chest for some reason
