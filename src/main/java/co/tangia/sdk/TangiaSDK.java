@@ -11,7 +11,6 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 import java.io.IOException;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 
@@ -21,8 +20,7 @@ public class TangiaSDK {
 
     private String sessionKey;
     private EventPoller eventPoller = new EventPoller();
-    private final String gameID;
-    private final String gameVersion;
+    private final String versionInfo;
     private final ArrayBlockingQueue<InteractionEvent> eventQueue = new ArrayBlockingQueue<>(100);
     private final ArrayBlockingQueue<EventResult> eventAckQueue = new ArrayBlockingQueue<>(100);
     private final Set<String> handledEventIds = new HashSet<>();
@@ -30,22 +28,34 @@ public class TangiaSDK {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public TangiaSDK(String gameID, String gameVersion) {
-        this(gameID, gameVersion, PROD_URL);
+    public TangiaSDK(String versionInfo) {
+        this(versionInfo, PROD_URL);
     }
 
-    public TangiaSDK(String gameID, String gameVersion, String baseUrl) {
-        this.gameID = gameID;
-        this.gameVersion = gameVersion;
+    public TangiaSDK(String versionInfo, String baseUrl) {
+        this.versionInfo = versionInfo;
         this.api = createApi(baseUrl);
     }
 
     public void login(String creatorCode) throws IOException, InvalidLoginException {
-        var call = api.login(new GameLoginReq(gameID, creatorCode));
+        var call = api.login(new IntegrationLoginReq(versionInfo, creatorCode));
         var res = execWithRetries(call);
         if (!res.isSuccessful() || res.body() == null)
-            throw new InvalidLoginException();
-        this.sessionKey = res.body().SessionID;
+            throw new InvalidLoginException(res.toString());
+        this.sessionKey = res.body().AccountKey;
+    }
+
+    public void logout() {
+        var call = api.logout(sessionKey);
+        Response<Void> res;
+        try {
+            res = execWithRetries(call);
+            if (!res.isSuccessful()) {
+                LOGGER.warn("logout failed: code {}", res.code());
+            }
+        } catch (IOException e) {
+            LOGGER.warn("logout failed", e);
+        }
     }
 
     public void startEventPolling() {
@@ -61,8 +71,15 @@ public class TangiaSDK {
         return eventQueue.poll();
     }
 
-    public void ackEvents(EventResult[] results) throws IOException, InvalidRequestException {
-        var call = api.ackEvents(this.sessionKey, new AckInteractionEventsReq(results));
+    public void ackEvent(String eventID) throws IOException, InvalidRequestException {
+        var call = api.ackEvent(this.sessionKey, eventID);
+        Response<Void> res = execWithRetries(call);
+        if (!res.isSuccessful())
+            throw new InvalidRequestException();
+    }
+
+    public void nackEvent(String eventID) throws IOException, InvalidRequestException {
+        var call = api.nackEvent(this.sessionKey, eventID);
         Response<Void> res = execWithRetries(call);
         if (!res.isSuccessful())
             throw new InvalidRequestException();
@@ -90,9 +107,9 @@ public class TangiaSDK {
 
     private static TangiaApi createApi(String baseUrl) {
         Retrofit retrofit = new Retrofit.Builder()
-            .baseUrl(baseUrl)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build();
+                .baseUrl(baseUrl)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
 
         return retrofit.create(TangiaApi.class);
     }
@@ -110,32 +127,24 @@ public class TangiaSDK {
             } catch (InterruptedException ex) {
                 LOGGER.warn("got interrupted, will stop event polling");
             }
-            var stopCall = api.notifyStopPlaying(sessionKey);
-            try {
-                Response<Void> stopResp = execWithRetries(stopCall);
-                if (!stopResp.isSuccessful())
-                    LOGGER.warn("couldn't notify stop playing");
-            } catch (IOException e) {
-                LOGGER.warn("couldn't notify stop playing: " + e.getMessage());
-            }
         }
 
         private void pollEvents() throws InterruptedException {
-            var acks = new LinkedList<EventResult>();
             while (true) {
-                var ack = eventAckQueue.poll();
-                if (ack == null)
+                var event = eventAckQueue.poll();
+                if (event == null)
                     break;
-                acks.add(ack);
-            }
-            if (acks.size() > 0) {
                 try {
-                    ackEvents(acks.toArray(new EventResult[0]));
+                    if (event.Executed) {
+                        ackEvent(event.EventID);
+                    } else {
+                        nackEvent(event.EventID);
+                    }
                 } catch (Exception e) {
                     LOGGER.warn("couldn't ack events: " + e);
                 }
             }
-            var eventsCall = api.pollEvents(sessionKey, new InteractionEventsReq(gameVersion));
+            var eventsCall = api.pollEvents(sessionKey);
             Response<InteractionEventsResp> eventsResp = null;
             try {
                 eventsResp = execWithRetries(eventsCall);
@@ -148,17 +157,17 @@ public class TangiaSDK {
                 return;
             }
             var body = eventsResp.body();
-            if (body == null || body.Events == null || body.Events.length == 0) {
+            if (body == null || body.ActionExecutions == null || body.ActionExecutions.length == 0) {
                 LOGGER.debug("no events");
                 Thread.sleep(50);
                 return;
             }
-            for (InteractionEvent e : body.Events) {
+            for (var ae : body.ActionExecutions) {
                 // we'll receive events until they get ack'ed/rejected
-                if (handledEventIds.contains(e.EventID))
+                if (handledEventIds.contains(ae.Body.EventID))
                     continue;
-                handledEventIds.add(e.EventID);
-                eventQueue.put(e);
+                handledEventIds.add(ae.Body.EventID);
+                eventQueue.put(ae.Body);
             }
         }
 

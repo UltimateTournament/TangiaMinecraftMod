@@ -1,8 +1,6 @@
 package co.tangia.minecraftmod;
 
-import com.mojang.brigadier.Command;
 import com.mojang.logging.LogUtils;
-import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -38,18 +36,18 @@ public class CommandComponent {
   }
 
   @SubscribeEvent
-  public void onTick(TickEvent.LevelTickEvent event) {
+  public void onTick(TickEvent.WorldTickEvent event) {
     if (this.stopListening) {
       MinecraftForge.EVENT_BUS.unregister(this);
       return;
     }
-    if (event.level.dayTime() > this.startTick + this.delayTicks) {
+    if (event.world.dayTime() > this.startTick + this.delayTicks) {
       this.stopListening = true;
-      var player = event.level.getPlayerByUUID(this.playerUUID);
+      var player = event.world.getPlayerByUUID(this.playerUUID);
       LOGGER.info("Running command: " + this.getMessage());
       if (player != null) {
-        event.level.getServer().getCommands().performCommand(
-                event.level.getServer().createCommandSourceStack(),
+        event.world.getServer().getCommands().performCommand(
+                event.world.getServer().createCommandSourceStack(),
                 this.getMessage());
       }
     }
