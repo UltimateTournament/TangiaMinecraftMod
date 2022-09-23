@@ -5,7 +5,7 @@ import retrofit2.http.*;
 
 public interface TangiaApi {
     @POST("/v2/actions/login")
-    Call<GameLoginResp> login(@Body IntegrationLoginReq req);
+    Call<LoginResp> login(@Body IntegrationLoginReq req);
 
     @POST("/v2/actions/logout")
     Call<Void> logout(@Header("Authorization") String auth);

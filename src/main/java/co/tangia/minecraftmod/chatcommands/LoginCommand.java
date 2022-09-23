@@ -43,7 +43,7 @@ public class LoginCommand {
             mod.login(player, StringArgumentType.getString(ctx, codeArg));
             player.sendMessage(new TextComponent("You're logged in now"), sender);
         } catch (Exception ex) {
-            LOGGER.warn("failed to login: " + ex);
+            LOGGER.warn("failed to login", ex);
             if (player != null) {
                 player.sendMessage(new TextComponent("We couldn't log you in"), sender);
             }

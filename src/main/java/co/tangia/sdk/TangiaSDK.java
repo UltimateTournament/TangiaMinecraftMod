@@ -41,8 +41,8 @@ public class TangiaSDK {
         var call = api.login(new IntegrationLoginReq(versionInfo, creatorCode));
         var res = execWithRetries(call);
         if (!res.isSuccessful() || res.body() == null)
-            throw new InvalidLoginException();
-        this.sessionKey = res.body().SessionID;
+            throw new InvalidLoginException(res.toString());
+        this.sessionKey = res.body().AccountKey;
     }
 
     public void logout() {

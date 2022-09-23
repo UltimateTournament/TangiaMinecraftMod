@@ -8,7 +8,7 @@ services:
     environment:
       EULA: "TRUE"
       VERSION: "1.18.2"
-      FORGEVERSION: "40.1.68"
+      FORGEVERSION: "40.1.80"
       TYPE: FORGE
       MEMORY: ""
       JVM_XX_OPTS: "-XX:MaxRAMPercentage=75"
