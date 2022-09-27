@@ -3,6 +3,9 @@ package co.tangia.sdk;
 import com.mojang.logging.LogUtils;
 import dev.failsafe.RetryPolicy;
 import dev.failsafe.retrofit.FailsafeCall;
+import okhttp3.Interceptor;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
 import org.slf4j.Logger;
 import retrofit2.Call;
 import retrofit2.Response;
@@ -25,16 +28,18 @@ public class TangiaSDK {
     private final ArrayBlockingQueue<EventResult> eventAckQueue = new ArrayBlockingQueue<>(100);
     private final Set<String> handledEventIds = new HashSet<>();
     private final TangiaApi api;
+    private final String integrationInfo;
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public TangiaSDK(String versionInfo) {
-        this(versionInfo, PROD_URL);
+    public TangiaSDK(String versionInfo, String integrationInfo) {
+        this(PROD_URL, versionInfo, integrationInfo);
     }
 
-    public TangiaSDK(String versionInfo, String baseUrl) {
+    public TangiaSDK(String baseUrl, String versionInfo, String integrationInfo) {
         this.versionInfo = versionInfo;
-        this.api = createApi(baseUrl);
+        this.integrationInfo = integrationInfo;
+        this.api = createApi(baseUrl, versionInfo, integrationInfo);
     }
 
     public void login(String creatorCode) throws IOException, InvalidLoginException {
@@ -105,12 +110,21 @@ public class TangiaSDK {
         return failsafeCall.execute();
     }
 
-    private static TangiaApi createApi(String baseUrl) {
+    private static TangiaApi createApi(String baseUrl, String versionInfo, String integrationInfo) {
+        OkHttpClient.Builder httpClient = new OkHttpClient.Builder();
+        httpClient.addInterceptor(chain -> {
+            Request request = chain.request()
+                    .newBuilder()
+                    .addHeader("tangia-integration", integrationInfo)
+                    .addHeader("tangia-version", versionInfo)
+                    .build();
+            return chain.proceed(request);
+        });
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(baseUrl)
+                .client(httpClient.build())
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
-
         return retrofit.create(TangiaApi.class);
     }
 

@@ -79,7 +79,8 @@ public class TangiaMod {
     private final Gson gson = new Gson();
     private final Map<UUID, TangiaSDK> playerSDKs = new HashMap<>();
     private final String tangiaUrl = "STAGING".equals(System.getenv("TANGIA_ENV")) ? TangiaSDK.STAGING_URL : TangiaSDK.PROD_URL;
-    private final String versionInfo = "MC-Fabric Mod 1.18.2";
+    private final String integrationInfo = "MC-Fabric Mod";
+    private final String versionInfo = "1.18.2";
 
     public TangiaMod() {
         // Register the setup method for modloading
@@ -138,7 +139,7 @@ public class TangiaMod {
 
     public void login(Player player, String code) throws InvalidLoginException, IOException {
         var id = player.getUUID();
-        var sdk = new TangiaSDK(versionInfo, tangiaUrl);
+        var sdk = new TangiaSDK(tangiaUrl, versionInfo, integrationInfo);
         sdk.login(code);
         synchronized (playerSDKs) {
             if (playerSDKs.get(id) != null)
@@ -177,7 +178,7 @@ public class TangiaMod {
         }
         var session = ModPersistence.data.sessions().get(player.getUUID());
         if (session != null) {
-            var sdk = new TangiaSDK(versionInfo, tangiaUrl);
+            var sdk = new TangiaSDK(tangiaUrl, versionInfo, integrationInfo);
             sdk.setSessionKey(session.sessionToken());
             playerSDKs.put(player.getUUID(), sdk);
             sdk.startEventPolling();
