@@ -151,18 +151,20 @@ public class TangiaMod {
         ModPersistence.store();
     }
 
-    public void logout(Player player, boolean removeSession) {
+    public void stopPlaying(Player player, boolean removeSession) {
         synchronized (playerSDKs) {
             var id = player.getUUID();
             var sdk = playerSDKs.get(id);
             if (sdk != null) {
                 sdk.stopEventPolling();
-                sdk.logout();
                 playerSDKs.remove(id);
             }
             if (removeSession) {
                 ModPersistence.data.sessions().remove(player.getUUID());
                 ModPersistence.store();
+                if (sdk != null) {
+                    sdk.logout();
+                }
             }
         }
     }
@@ -190,7 +192,7 @@ public class TangiaMod {
     @SubscribeEvent
     public void onPlayerLeave(PlayerEvent.PlayerLoggedOutEvent event) {
         // TODO figure out if we get a stable identity for players so we can keep their session when they come back
-        logout(event.getPlayer(), false);
+        stopPlaying(event.getPlayer(), false);
     }
 
     @SubscribeEvent
