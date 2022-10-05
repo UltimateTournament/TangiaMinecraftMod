@@ -19,7 +19,7 @@ plugins {
 apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'com.github.johnrengelman.shadow'
 
-version = '1.0.3'
+version = '1.0.4'
 group = 'co.tangia.minecraft' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = 'tangia'
 
