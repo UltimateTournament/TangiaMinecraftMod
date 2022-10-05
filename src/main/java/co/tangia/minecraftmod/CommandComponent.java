@@ -12,10 +12,10 @@ public class CommandComponent {
   public String command;
   public String playerName;
   public String displayName;
-  private long startTick;
+  private final long startTick;
   private boolean stopListening;
   public int delayTicks;
-  private UUID playerUUID;
+  private final UUID playerUUID;
   private static final Logger LOGGER = LogUtils.getLogger();
 
   public CommandComponent(String playerName, String displayName, UUID playerUUID, String command, long startTick , int delayTicks) {
@@ -41,15 +41,17 @@ public class CommandComponent {
       MinecraftForge.EVENT_BUS.unregister(this);
       return;
     }
-    if (event.world.dayTime() > this.startTick + this.delayTicks) {
-      this.stopListening = true;
-      var player = event.world.getPlayerByUUID(this.playerUUID);
-      LOGGER.info("Running command: " + this.getMessage());
-      if (player != null) {
-        event.world.getServer().getCommands().performCommand(
-                event.world.getServer().createCommandSourceStack(),
-                this.getMessage());
-      }
+    if (event.world.dayTime() <= this.startTick + this.delayTicks) {
+      return;
     }
+    this.stopListening = true;
+    var player = event.world.getPlayerByUUID(this.playerUUID);
+    if (player == null) {
+      return;
+    }
+    LOGGER.info("Running command: " + this.getMessage());
+    player.level.getServer().getCommands().performCommand(
+            player.level.getServer().createCommandSourceStack(),
+            this.getMessage());
   }
 }

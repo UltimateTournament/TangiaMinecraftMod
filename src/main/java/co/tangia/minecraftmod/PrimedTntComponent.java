@@ -17,9 +17,9 @@ public class PrimedTntComponent {
     public float yOffset;
     public float zOffset;
     public int delaySeconds;
-    private long startTick;
+    private final long startTick;
     private boolean stopListening;
-    private UUID playerUUID;
+    private final UUID playerUUID;
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
@@ -44,17 +44,19 @@ public class PrimedTntComponent {
             MinecraftForge.EVENT_BUS.unregister(this);
             return;
         }
-        if (event.world.dayTime() > this.startTick + this.delaySeconds * 20) {
-            LOGGER.info("Spawning tnt");
-            var player = event.world.getPlayerByUUID(this.playerUUID);
-            this.stopListening = true;
-            if (player != null) {
-                var liveTNT = new PrimedTnt(event.world, player.getX()+this.xOffset, player.getY()+this.yOffset, player.getZ()+this.zOffset, null);
-                if (this.primeTicks != 0) {
-                    liveTNT.setFuse(this.primeTicks);
-                }
-                event.world.addFreshEntity(liveTNT);
-            }
+        if (event.world.dayTime() <= this.startTick + this.delaySeconds * 20) {
+            return;
         }
+        var player = event.world.getPlayerByUUID(this.playerUUID);
+        this.stopListening = true;
+        if (player == null) {
+            return;
+        }
+        LOGGER.info("Spawning tnt");
+        var liveTNT = new PrimedTnt(player.level, player.getX()+this.xOffset, player.getY()+this.yOffset, player.getZ()+this.zOffset, null);
+        if (this.primeTicks != 0) {
+            liveTNT.setFuse(this.primeTicks);
+        }
+        player.level.addFreshEntity(liveTNT);
     }
 }

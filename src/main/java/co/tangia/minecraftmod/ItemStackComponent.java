@@ -1,16 +1,13 @@
 package co.tangia.minecraftmod;
 
-import java.util.Map;
-
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraftforge.registries.ForgeRegistries;
+
+import java.util.Map;
 
 public class ItemStackComponent {
   public String itemID;
@@ -26,10 +23,10 @@ public class ItemStackComponent {
   public ItemStack getItemStack(String displayName) {
     ItemStack is = new ItemStack(ForgeRegistries.ITEMS.getValue(new ResourceLocation(this.itemID)), this.stackSize);
     if (this.enchantments != null) {
-      for (int i = 0; i < this.enchantments.length; i++) {
-        Enchantment ench = this.enchantments[i].getEnchantment();
+      for (EnchantmentComponent enchantment : this.enchantments) {
+        Enchantment ench = enchantment.getEnchantment();
         if (ench != null) {
-          is.enchant(ench, this.enchantments[i].level);
+          is.enchant(ench, enchantment.level);
         }
       }
     }
