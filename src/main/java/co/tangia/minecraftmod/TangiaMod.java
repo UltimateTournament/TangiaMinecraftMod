@@ -8,7 +8,10 @@ import co.tangia.sdk.EventResult;
 import co.tangia.sdk.InteractionEvent;
 import co.tangia.sdk.InvalidLoginException;
 import co.tangia.sdk.TangiaSDK;
+import com.google.gson.ExclusionStrategy;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.ReflectionAccessFilter;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -76,7 +79,7 @@ import java.util.stream.Collectors;
 public class TangiaMod {
     // Directly reference a slf4j logger
     private static final Logger LOGGER = LogUtils.getLogger();
-    private final Gson gson = new Gson();
+    private final Gson gson = new GsonBuilder().addReflectionAccessFilter(ReflectionAccessFilter.BLOCK_INACCESSIBLE_JAVA).create();
     private final Map<UUID, TangiaSDK> playerSDKs = new HashMap<>();
     private final String tangiaUrl = "STAGING".equals(System.getenv("TANGIA_ENV")) ? TangiaSDK.STAGING_URL : TangiaSDK.PROD_URL;
     private final String integrationInfo = "MC-Fabric Mod";

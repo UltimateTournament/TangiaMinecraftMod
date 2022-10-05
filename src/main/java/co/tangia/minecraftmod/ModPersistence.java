@@ -1,6 +1,8 @@
 package co.tangia.minecraftmod;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.ReflectionAccessFilter;
 import com.mojang.logging.LogUtils;
 import org.slf4j.Logger;
 
@@ -15,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 public class ModPersistence {
     private static final ThreadPoolExecutor executor = new ThreadPoolExecutor(0, 1, 0, TimeUnit.SECONDS, new ArrayBlockingQueue<>(100));
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Gson gson = new Gson();
+    private static final Gson gson = new GsonBuilder().addReflectionAccessFilter(ReflectionAccessFilter.BLOCK_INACCESSIBLE_JAVA).create();
     private static final String fileName = "./tangia-persistence.json";
 
     static ModPersistenceData data = new ModPersistenceData(new HashMap<>());
