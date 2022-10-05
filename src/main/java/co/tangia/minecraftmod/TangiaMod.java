@@ -8,7 +8,6 @@ import co.tangia.sdk.EventResult;
 import co.tangia.sdk.InteractionEvent;
 import co.tangia.sdk.InvalidLoginException;
 import co.tangia.sdk.TangiaSDK;
-import com.google.gson.ExclusionStrategy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.ReflectionAccessFilter;
@@ -66,10 +65,7 @@ import net.minecraftforge.server.command.ConfigCommand;
 import org.slf4j.Logger;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -217,8 +213,10 @@ public class TangiaMod {
                 continue;
             }
             try {
-                handlePlayerInteraction(interaction, player);
-                sdk.ackEventAsync(new EventResult(interaction.EventID, true, null));
+                var instantAck = handlePlayerInteraction(interaction, player, sdk);
+                if (instantAck) {
+                    sdk.ackEventAsync(new EventResult(interaction.EventID, true, null));
+                }
             } catch (Exception e) {
                 LOGGER.error("exception in interaction processing", e);
                 sdk.ackEventAsync(new EventResult(interaction.EventID, false, "exception"));
@@ -227,7 +225,8 @@ public class TangiaMod {
         }
     }
 
-    private void handlePlayerInteraction(InteractionEvent interaction, ServerPlayer player) {
+    private boolean handlePlayerInteraction(InteractionEvent interaction, ServerPlayer player, TangiaSDK sdk) {
+        var instantAck = true;
         InspectMetadata inspect = gson.fromJson(interaction.Metadata, InspectMetadata.class);
 
         if (inspect.items != null) {
@@ -258,9 +257,11 @@ public class TangiaMod {
             }
         }
         if (inspect.commands != null) {
+            var ackWaiter = new CommandAckWaiter(interaction, sdk);
             for (var command : inspect.commands) {
+                instantAck = false;
                 // Run the command
-                var cmd = new CommandComponent(player.getName().getString(), interaction.BuyerName, player.getUUID(), command.command, player.level.dayTime(), command.delayTicks);
+                var cmd = new CommandComponent(player.getName().getString(), interaction.BuyerName, player.getUUID(), command.command, player.level.dayTime(), command.delayTicks, ackWaiter);
                 cmd.init();
             }
         }
@@ -354,6 +355,7 @@ public class TangiaMod {
                 var wlc = new WhitelistCommand();
             }
         }
+        return instantAck;
     }
 
     // You can use EventBusSubscriber to automatically subscribe events on the contained class (this is subscribing to the MOD
@@ -586,4 +588,34 @@ public class TangiaMod {
         }
     }
 
+    public static class CommandAckWaiter {
+        private final InteractionEvent interaction;
+        private final TangiaSDK sdk;
+        private final List<CommandComponent> cmds = new LinkedList<>();
+
+        public CommandAckWaiter(InteractionEvent interaction, TangiaSDK sdk) {
+            this.interaction = interaction;
+            this.sdk = sdk;
+        }
+
+        public void add(CommandComponent cmd) {
+            cmds.add(cmd);
+        }
+
+        public void ack(CommandComponent cmd) {
+            // ack when the last one gets removed
+            if (cmds.remove(cmd) && cmds.size() == 0) {
+                sdk.ackEventAsync(new EventResult(interaction.EventID, true, null));
+            }
+        }
+
+        public void fail(CommandComponent cmd) {
+            // don't double-nack
+            if (!cmds.remove(cmd)) {
+                return;
+            }
+            cmds.clear();
+            sdk.ackEventAsync(new EventResult(interaction.EventID, false, "command failed"));
+        }
+    }
 }
