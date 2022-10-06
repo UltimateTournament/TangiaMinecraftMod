@@ -138,7 +138,7 @@ public class TangiaMod {
 
     public void login(Player player, String code) throws InvalidLoginException, IOException {
         var id = player.getUUID();
-        var sdk = new TangiaSDK(tangiaUrl, versionInfo, integrationInfo);
+        var sdk = new TangiaSDK(tangiaUrl, versionInfo, integrationInfo, (reason) -> stopPlaying(player, true));
         sdk.login(code);
         synchronized (playerSDKs) {
             if (playerSDKs.get(id) != null)
@@ -164,6 +164,7 @@ public class TangiaMod {
                 if (sdk != null) {
                     sdk.logout();
                 }
+                player.sendMessage(new TextComponent("We've logged you out of your Tangia account"), UUID.randomUUID());
             }
         }
     }
@@ -174,16 +175,17 @@ public class TangiaMod {
             return;
         }
         LOGGER.info("Player with UUID {} joined", player.getUUID());
-        if (playerSDKs.get(player.getUUID()) != null) {
+        UUID playerUUID = player.getUUID();
+        if (playerSDKs.get(playerUUID) != null) {
             return;
         }
-        var session = ModPersistence.data.sessions().get(player.getUUID());
+        var session = ModPersistence.data.sessions().get(playerUUID);
         if (session != null) {
-            var sdk = new TangiaSDK(tangiaUrl, versionInfo, integrationInfo);
+            var sdk = new TangiaSDK(tangiaUrl, versionInfo, integrationInfo, (reason) -> stopPlaying(player, true));
             sdk.setSessionKey(session.sessionToken());
-            playerSDKs.put(player.getUUID(), sdk);
+            playerSDKs.put(playerUUID, sdk);
             sdk.startEventPolling();
-            LOGGER.info("Tangia session restored for Player with UUID {}", player.getUUID());
+            LOGGER.info("Tangia session restored for Player with UUID {}", playerUUID);
             player.sendMessage(new TextComponent("We've logged you back into your Tangia account"), UUID.randomUUID());
         }
     }

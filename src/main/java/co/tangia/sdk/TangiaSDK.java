@@ -3,7 +3,6 @@ package co.tangia.sdk;
 import com.mojang.logging.LogUtils;
 import dev.failsafe.RetryPolicy;
 import dev.failsafe.retrofit.FailsafeCall;
-import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import org.slf4j.Logger;
@@ -16,6 +15,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.function.Consumer;
 
 public class TangiaSDK {
     public static final String PROD_URL = "https://api.tangia.co/";
@@ -29,16 +29,14 @@ public class TangiaSDK {
     private final Set<String> handledEventIds = new HashSet<>();
     private final TangiaApi api;
     private final String integrationInfo;
+    private final Consumer<String> sessionFailCallback;
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public TangiaSDK(String versionInfo, String integrationInfo) {
-        this(PROD_URL, versionInfo, integrationInfo);
-    }
-
-    public TangiaSDK(String baseUrl, String versionInfo, String integrationInfo) {
+    public TangiaSDK(String baseUrl, String versionInfo, String integrationInfo, Consumer<String> sessionFailCallback) {
         this.versionInfo = versionInfo;
         this.integrationInfo = integrationInfo;
+        this.sessionFailCallback = sessionFailCallback;
         this.api = createApi(baseUrl, versionInfo, integrationInfo);
     }
 
@@ -91,6 +89,11 @@ public class TangiaSDK {
     }
 
     public void ackEventAsync(EventResult e) {
+        if (e.Executed) {
+            LOGGER.info("ack-ing event {} success:{}", e.EventID, true);
+        } else {
+            LOGGER.warn("nack-ing event {} success:{}, {}", e.EventID, false, e.Message);
+        }
         if (!eventAckQueue.offer(e)) {
             LOGGER.warn("ack-queue is full!");
         }
@@ -166,7 +169,15 @@ public class TangiaSDK {
                 LOGGER.warn("error when polling events: " + e.getMessage());
             }
             if (eventsResp == null || !eventsResp.isSuccessful()) {
-                LOGGER.warn("couldn't get events");
+                LOGGER.warn("couldn't get events: {}", eventsResp);
+                if (eventsResp != null && eventsResp.code() == 401) {
+                    LOGGER.warn("login invalid. Stopping event polling");
+                    this.stopPolling();
+                    if (sessionFailCallback != null) {
+                        sessionFailCallback.accept("session key got unauthorized");
+                    }
+                    return;
+                }
                 Thread.sleep(200);
                 return;
             }
