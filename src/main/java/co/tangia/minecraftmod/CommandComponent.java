@@ -27,7 +27,7 @@ public class CommandComponent implements CommandSource {
   private final UUID playerUUID;
   private static final Logger LOGGER = LogUtils.getLogger();
 
-  public CommandComponent(String playerName, String displayName, UUID playerUUID, String command, long startTick , int delayTicks, TangiaMod.CommandAckWaiter ackWaiter) {
+  public CommandComponent(String playerName, String displayName, UUID playerUUID, String command, long startTick, int delayTicks, TangiaMod.CommandAckWaiter ackWaiter) {
     this.playerUUID = playerUUID;
     this.playerName = playerName;
     this.displayName = displayName;
@@ -42,8 +42,8 @@ public class CommandComponent implements CommandSource {
 
   public String getMessage() {
     return this.command
-            .replaceAll("\\$DISPLAYNAME", this.displayName)
-            .replaceAll("\\$PLAYERNAME", this.playerName);
+        .replaceAll("\\$DISPLAYNAME", this.displayName)
+        .replaceAll("\\$PLAYERNAME", this.playerName);
   }
 
   public void init() {
@@ -66,10 +66,12 @@ public class CommandComponent implements CommandSource {
     var stack = new CommandSourceStack(this, event.player.position(), Vec2.ZERO, (ServerLevel) event.player.level, 4, "Server", new TextComponent("Server"), event.player.level.getServer(), null);
     var res = event.player.level.getServer().getCommands().performCommand(stack, this.getMessage());
     LOGGER.info("Ran command: " + this.getMessage() + " res: " + res);
-    if (res > 0) {
-      this.ackWaiter.ack(this);
-    } else {
-      this.ackWaiter.fail(this);
+    if (this.ackWaiter != null) {
+      if (res > 0) {
+        this.ackWaiter.ack(this);
+      } else {
+        this.ackWaiter.fail(this);
+      }
     }
   }
 

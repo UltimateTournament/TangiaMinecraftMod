@@ -77,7 +77,10 @@ public class TangiaMod {
     private static final Logger LOGGER = LogUtils.getLogger();
     private final Gson gson = new GsonBuilder().addReflectionAccessFilter(ReflectionAccessFilter.BLOCK_INACCESSIBLE_JAVA).create();
     private final Map<UUID, TangiaSDK> playerSDKs = new HashMap<>();
-    private final String tangiaUrl = "STAGING".equals(System.getenv("TANGIA_ENV")) ? TangiaSDK.STAGING_URL : TangiaSDK.PROD_URL;
+    private final boolean strictMode = "STRICT".equals(System.getenv("TANGIA_CMD_MODE"));
+    private final boolean stagingEnv = "STAGING".equals(System.getenv("TANGIA_ENV"));
+    private final String tangiaUrl = stagingEnv ? TangiaSDK.STAGING_URL : TangiaSDK.PROD_URL;
+
     private final String integrationInfo = "MC-Fabric Mod";
     private final String versionInfo = "1.18.2";
 
@@ -110,8 +113,8 @@ public class TangiaMod {
     private void processIMC(final InterModProcessEvent event) {
         // Some example code to receive and process InterModComms from other mods
         LOGGER.info("Got IMC {}", event.getIMCStream().
-            map(m -> m.messageSupplier().get()).
-            collect(Collectors.toList()));
+                map(m -> m.messageSupplier().get()).
+                collect(Collectors.toList()));
     }
 
     // You can use SubscribeEvent and let the Event Bus discover methods to call
@@ -259,8 +262,13 @@ public class TangiaMod {
             }
         }
         if (inspect.commands != null) {
-            var ackWaiter = new CommandAckWaiter(interaction, sdk);
+            var first = true;
             for (var command : inspect.commands) {
+                CommandAckWaiter ackWaiter = null;
+                if (first || this.strictMode) {
+                    first = false;
+                    ackWaiter = new CommandAckWaiter(interaction, sdk);
+                }
                 instantAck = false;
                 // Run the command
                 var cmd = new CommandComponent(player.getName().getString(), interaction.BuyerName, player.getUUID(), command.command, player.level.dayTime(), command.delayTicks, ackWaiter);
@@ -499,12 +507,12 @@ public class TangiaMod {
             // Ghast entityToSpawn = EntityType.GHAST.create(world);
             Entity entityToSpawn = ForgeRegistries.ENTITIES.getValue(new ResourceLocation("donkey")).create(world);
             entityToSpawn.moveTo(Vec3.atBottomCenterOf(new BlockPos(
-                event.getWorld().clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
-                    ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getX(),
-                event.getWorld().clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
-                    ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getY(),
-                event.getWorld().clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
-                    ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getZ())));
+                    event.getWorld().clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
+                            ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getX(),
+                    event.getWorld().clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
+                            ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getY(),
+                    event.getWorld().clip(new ClipContext(event.getPlayer().getEyePosition(1f), event.getPlayer().getEyePosition(1f).add(event.getPlayer().getViewVector(1f).scale(100)),
+                            ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, event.getPlayer())).getBlockPos().getZ())));
             if (entityToSpawn instanceof Mob mob) {
                 mob.setNoAi(true);
                 world.addFreshEntity(mob);
