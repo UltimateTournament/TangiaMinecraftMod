@@ -178,7 +178,11 @@ public class TangiaSDK {
                     }
                     return;
                 }
-                Thread.sleep(200);
+                long sleepMS = 1000;
+                if (eventsResp != null && eventsResp.code() == 429) {
+                    sleepMS = 3000;
+                }
+                Thread.sleep(sleepMS);
                 return;
             }
             var body = eventsResp.body();
