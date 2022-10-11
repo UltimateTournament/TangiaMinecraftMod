@@ -191,12 +191,19 @@ public class TangiaSDK {
                 Thread.sleep(50);
                 return;
             }
+            var gotNewEvents = false;
             for (var ae : body.ActionExecutions) {
                 // we'll receive events until they get ack'ed/rejected
                 if (handledEventIds.contains(ae.Body.EventID))
                     continue;
+                gotNewEvents = true;
                 handledEventIds.add(ae.Body.EventID);
                 eventQueue.put(ae.Body);
+            }
+            // if we're only getting known (but un-acked) events then we have to throttle down
+            // as the long-polling won't do it for us
+            if (body.ActionExecutions.length > 0 && !gotNewEvents) {
+                Thread.sleep(1000);
             }
         }
 
