@@ -1,4 +1,6 @@
-# TangiaMinecraftMod
+# Tangia Minecraft Mod
+
+> ⚠️ This mod is for a Minecraft *SERVER*. So if you want to run single-player, just run a local server.
 
 https://docs.minecraftforge.net/en/latest/gettingstarted/
 
