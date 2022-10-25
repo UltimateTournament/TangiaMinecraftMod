@@ -12,8 +12,6 @@ services:
       TYPE: FORGE
       MEMORY: ""
       JVM_XX_OPTS: "-XX:MaxRAMPercentage=75"
-      TANGIA_ENV: STAGING
-      TANGIA_GAME_ID: game_aaniPhdMIRffFYKPBNtMtA
     tty: true
     stdin_open: true
     restart: unless-stopped
