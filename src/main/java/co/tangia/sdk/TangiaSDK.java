@@ -30,13 +30,15 @@ public class TangiaSDK {
     private final TangiaApi api;
     private final String integrationInfo;
     private final Consumer<String> sessionFailCallback;
+    private final Consumer<InteractionEvent> eventCallback;
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public TangiaSDK(String baseUrl, String versionInfo, String integrationInfo, Consumer<String> sessionFailCallback) {
+    public TangiaSDK(String baseUrl, String versionInfo, String integrationInfo, Consumer<String> sessionFailCallback, Consumer<InteractionEvent> eventCallback) {
         this.versionInfo = versionInfo;
         this.integrationInfo = integrationInfo;
         this.sessionFailCallback = sessionFailCallback;
+        this.eventCallback = eventCallback;
         this.api = createApi(baseUrl, versionInfo, integrationInfo);
     }
 
@@ -198,7 +200,11 @@ public class TangiaSDK {
                     continue;
                 gotNewEvents = true;
                 handledEventIds.add(ae.Body.EventID);
-                eventQueue.put(ae.Body);
+                if (eventCallback != null) {
+                    eventCallback.accept(ae.Body);
+                } else {
+                    eventQueue.put(ae.Body);
+                }
             }
             // if we're only getting known (but un-acked) events then we have to throttle down
             // as the long-polling won't do it for us

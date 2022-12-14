@@ -179,6 +179,7 @@ dependencies {
     library 'com.google.code.gson:gson:2.9.1'
     library 'dev.failsafe:failsafe:3.2.4'
     library 'dev.failsafe:failsafe-retrofit:3.2.4'
+    runtimeOnly group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.13.3'
 }
 
 // Configure all runs with the following
