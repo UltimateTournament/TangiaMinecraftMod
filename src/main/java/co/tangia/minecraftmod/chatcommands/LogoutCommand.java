@@ -8,7 +8,8 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.logging.LogUtils;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.contents.LiteralContents;
 import org.slf4j.Logger;
 
 import java.util.UUID;
@@ -38,7 +39,7 @@ public class LogoutCommand {
         try {
             var player = ctx.getSource().getPlayerOrException();
             mod.stopPlaying(player, true);
-            player.sendMessage(new TextComponent("You're logged out now"), sender);
+            player.sendSystemMessage(MutableComponent.create(new LiteralContents("You're logged out now")));
         } catch (Exception e) {
             LOGGER.error("exception in command", e);
         }

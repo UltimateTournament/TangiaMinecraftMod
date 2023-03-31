@@ -3,7 +3,8 @@ package co.tangia.minecraftmod;
 import java.util.Map;
 
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.contents.LiteralContents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
@@ -19,7 +20,7 @@ public class MobComponent {
   public Boolean noAI;
 
   public Mob getMob(Level level, String displayName) {
-    Entity entity = ForgeRegistries.ENTITIES.getValue(new ResourceLocation(this.entityID)).create(level);
+    Entity entity = ForgeRegistries.ENTITY_TYPES.getValue(new ResourceLocation(this.entityID)).create(level);
     if (entity instanceof Mob mob) {
       // Apply nbts
       if (this.nbtStrings != null) {
@@ -47,9 +48,9 @@ public class MobComponent {
       if (this.customName != null && this.customName != "") {
         mob.setCustomNameVisible(true);
         if (displayName != null) {
-          mob.setCustomName(new TextComponent(this.customName.replaceAll("\\$DISPLAYNAME", displayName)));
+          mob.setCustomName(MutableComponent.create(new LiteralContents(this.customName.replaceAll("\\$DISPLAYNAME", displayName))));
         } else {
-          mob.setCustomName(new TextComponent(this.customName));
+          mob.setCustomName(MutableComponent.create(new LiteralContents(this.customName)));
         }
       }
   

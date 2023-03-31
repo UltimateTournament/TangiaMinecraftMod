@@ -32,19 +32,19 @@ public class SoundComponent {
     }
 
     @SubscribeEvent
-    public void onTick(TickEvent.WorldTickEvent event) {
+    public void onTick(TickEvent.LevelTickEvent event) {
         if (this.stopListening) {
             MinecraftForge.EVENT_BUS.unregister(this);
             return;
         }
-        if (event.world.dayTime() <= this.startTick + this.delaySeconds * 20) {
+        if (event.level.dayTime() <= this.startTick + this.delaySeconds * 20) {
             return;
         }
-        var player = event.world.getPlayerByUUID(this.playerUUID);
+        var player = event.level.getPlayerByUUID(this.playerUUID);
         if (player == null) {
             return;
         }
-        BlockPos bp = new BlockPos(player.getX(), player.getY(), player.getZ());
+        BlockPos bp = new BlockPos((int) player.getX(), (int) player.getY(), (int) player.getZ());
         player.level.playSound(null, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(this.soundID)), SoundSource.AMBIENT, 1f, 1f);
         this.stopListening = true;
     }

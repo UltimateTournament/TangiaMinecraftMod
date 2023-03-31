@@ -1,17 +1,16 @@
 package co.tangia.minecraftmod;
 
+import com.mojang.brigadier.ParseResults;
 import com.mojang.logging.LogUtils;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.Entity;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.contents.LiteralContents;
 import net.minecraft.world.phys.Vec2;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
 import java.util.UUID;
@@ -63,8 +62,9 @@ public class CommandComponent implements CommandSource {
       return;
     }
     this.stopListening = true;
-    var stack = new CommandSourceStack(this, event.player.position(), Vec2.ZERO, (ServerLevel) event.player.level, 4, "Server", new TextComponent("Server"), event.player.level.getServer(), null);
-    var res = event.player.level.getServer().getCommands().performCommand(stack, this.getMessage());
+    // TODO use right level
+    var stack = new CommandSourceStack(this, event.player.position(), Vec2.ZERO, event.player.getServer().overworld(), 4, "Server", MutableComponent.create(new LiteralContents("Server")), event.player.level.getServer(), null);
+    var res = event.player.level.getServer().getCommands().performPrefixedCommand(stack, this.getMessage());
     LOGGER.info("Ran command: " + this.getMessage() + " res: " + res);
     if (this.ackWaiter != null) {
       if (res > 0) {
@@ -76,8 +76,8 @@ public class CommandComponent implements CommandSource {
   }
 
   @Override
-  public void sendMessage(Component c, @NotNull UUID u) {
-    LOGGER.info("command got message: {} {}", c.getString(), u);
+  public void sendSystemMessage(Component c) {
+    LOGGER.info("command got message: {}", c.getString());
   }
 
   @Override

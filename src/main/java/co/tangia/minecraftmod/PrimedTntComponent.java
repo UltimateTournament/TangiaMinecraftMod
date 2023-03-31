@@ -39,15 +39,15 @@ public class PrimedTntComponent {
     }
 
     @SubscribeEvent
-    public void onTick(TickEvent.WorldTickEvent event) {
+    public void onTick(TickEvent.LevelTickEvent event) {
         if (this.stopListening) {
             MinecraftForge.EVENT_BUS.unregister(this);
             return;
         }
-        if (event.world.dayTime() <= this.startTick + this.delaySeconds * 20) {
+        if (event.level.dayTime() <= this.startTick + this.delaySeconds * 20) {
             return;
         }
-        var player = event.world.getPlayerByUUID(this.playerUUID);
+        var player = event.level.getPlayerByUUID(this.playerUUID);
         this.stopListening = true;
         if (player == null) {
             return;

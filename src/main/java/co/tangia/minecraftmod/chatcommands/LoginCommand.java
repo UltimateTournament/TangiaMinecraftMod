@@ -8,7 +8,8 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.logging.LogUtils;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.contents.LiteralContents;
 import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
 
@@ -41,11 +42,11 @@ public class LoginCommand {
         try {
             player = ctx.getSource().getPlayerOrException();
             mod.login(player, StringArgumentType.getString(ctx, codeArg));
-            player.sendMessage(new TextComponent("You're logged in now"), sender);
+            player.sendSystemMessage(MutableComponent.create(new LiteralContents("You're logged in now")));
         } catch (Exception ex) {
             LOGGER.warn("failed to login", ex);
             if (player != null) {
-                player.sendMessage(new TextComponent("We couldn't log you in"), sender);
+                player.sendSystemMessage(MutableComponent.create(new LiteralContents("We couldn't log you in")));
             }
             return 0;
         }
