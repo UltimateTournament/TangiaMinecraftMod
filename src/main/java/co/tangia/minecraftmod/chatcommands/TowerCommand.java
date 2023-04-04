@@ -8,7 +8,6 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.logging.LogUtils;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
 
 public class TowerCommand {
@@ -27,7 +26,7 @@ public class TowerCommand {
 
     private int createTower(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         try {
-            ServerPlayer player = ctx.getSource().getPlayerOrException();
+            var player = ctx.getSource().getPlayerOrException();
             var world = player.getCommandSenderWorld();
             var tower = new TowerComponent(player.getX() + 2, player.getY(), player.getZ() + 2, 20);
             tower.instantiate(world, true);
@@ -40,7 +39,7 @@ public class TowerCommand {
 
     private int template(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         try {
-            ServerPlayer player = ctx.getSource().getPlayerOrException();
+            var player = ctx.getSource().getPlayerOrException();
             var world = player.getCommandSenderWorld();
             var tower = new TowerComponent(player.getX() + 2, player.getY(), player.getZ() + 2, 0);
             tower.instantiate(world, false);

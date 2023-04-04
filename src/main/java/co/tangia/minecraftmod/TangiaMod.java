@@ -89,7 +89,6 @@ public class TangiaMod {
 
   private final Map<UUID, Deque<EventReceival>> lastEvents = new HashMap<>();
 
-
   static {
     if (System.getenv("TANGIA_LOGS") == null) {
       LOGGER.info("Disabling logging for Tangia. To re-enable set the env var TANGIA_LOGS=1");
@@ -211,7 +210,9 @@ public class TangiaMod {
     Deque<EventReceival> events;
     synchronized (lastEvents) {
       events = lastEvents.get(id);
-      if (events != null) {
+    }
+    if (events != null) {
+      synchronized (events) {
         var now = System.currentTimeMillis();
         for (var er : events) {
           if (er.event.DeathReplaySecs > 0 && now - er.receivedAt < er.event.DeathReplaySecs * 1_000) {
@@ -272,12 +273,22 @@ public class TangiaMod {
       var interaction = sdk.popEventQueue();
       if (interaction == null)
         continue;
-      LOGGER.info("Got event '{}' for '{}' with metadata '{}'", interaction.EventID, sdkEntry.getKey(), interaction.Metadata);
       var player = event.level.getServer().getPlayerList().getPlayer(sdkEntry.getKey());
       if (player == null) {
         LOGGER.warn("Interaction for unavailable player");
         sdk.ackEventAsync(new EventResult(interaction.EventID, false, "player not in game"));
         continue;
+      }
+      LOGGER.info("Got event '{}' for '{}' with metadata '{}'", interaction.EventID, sdkEntry.getKey(), interaction.Metadata);
+      Deque<EventReceival> playerLastEvents;
+      synchronized (lastEvents) {
+        playerLastEvents = lastEvents.computeIfAbsent(player.getUUID(), k -> new LinkedList<>());
+      }
+      synchronized (playerLastEvents) {
+        playerLastEvents.add(new EventReceival(interaction, System.currentTimeMillis()));
+        if (playerLastEvents.size() > 15) {
+          playerLastEvents.removeFirst();
+        }
       }
       processEvent(sdk, interaction, player);
 
@@ -285,13 +296,6 @@ public class TangiaMod {
   }
 
   private void processEvent(TangiaSDK sdk, InteractionEvent e, Player p) {
-    synchronized (lastEvents) {
-      var playerLastEvents = lastEvents.computeIfAbsent(p.getUUID(), k -> new LinkedList<>());
-      playerLastEvents.add(new EventReceival(e, System.currentTimeMillis()));
-      if (playerLastEvents.size() > 15) {
-        playerLastEvents.removeFirst();
-      }
-    }
     try {
       var instantAck = handlePlayerInteraction(e, p, sdk);
       if (instantAck) {
