@@ -1,11 +1,11 @@
 package co.tangia.sdk;
 
-import com.mojang.logging.LogUtils;
 import dev.failsafe.RetryPolicy;
 import dev.failsafe.retrofit.FailsafeCall;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.Retrofit;
@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class TangiaSDK {
@@ -30,11 +31,11 @@ public class TangiaSDK {
     private final TangiaApi api;
     private final String integrationInfo;
     private final Consumer<String> sessionFailCallback;
-    private final Consumer<InteractionEvent> eventCallback;
+    private final BiConsumer<TangiaSDK, InteractionEvent> eventCallback;
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = LoggerFactory.getLogger(TangiaSDK.class.getName());
 
-    public TangiaSDK(String baseUrl, String versionInfo, String integrationInfo, Consumer<String> sessionFailCallback, Consumer<InteractionEvent> eventCallback) {
+    public TangiaSDK(String baseUrl, String versionInfo, String integrationInfo, Consumer<String> sessionFailCallback, BiConsumer<TangiaSDK, InteractionEvent> eventCallback) {
         this.versionInfo = versionInfo;
         this.integrationInfo = integrationInfo;
         this.sessionFailCallback = sessionFailCallback;
@@ -64,7 +65,11 @@ public class TangiaSDK {
     }
 
     public void startEventPolling() {
-        eventPoller.start();
+        try {
+            eventPoller.start();
+        } catch (IllegalThreadStateException ex) {
+            LOGGER.info("ignoring double start of event loop");
+        }
     }
 
     public void stopEventPolling() {
@@ -119,17 +124,17 @@ public class TangiaSDK {
         OkHttpClient.Builder httpClient = new OkHttpClient.Builder();
         httpClient.addInterceptor(chain -> {
             Request request = chain.request()
-                    .newBuilder()
-                    .addHeader("tangia-integration", integrationInfo)
-                    .addHeader("tangia-version", versionInfo)
-                    .build();
+                .newBuilder()
+                .addHeader("tangia-integration", integrationInfo)
+                .addHeader("tangia-version", versionInfo)
+                .build();
             return chain.proceed(request);
         });
         Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(baseUrl)
-                .client(httpClient.build())
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
+            .baseUrl(baseUrl)
+            .client(httpClient.build())
+            .addConverterFactory(GsonConverterFactory.create())
+            .build();
         return retrofit.create(TangiaApi.class);
     }
 
@@ -139,30 +144,47 @@ public class TangiaSDK {
         @Override
         public void run() {
             super.run();
-            try {
-                while (!stopped) {
+            while (!stopped) {
+                try {
                     pollEvents();
+                } catch (Exception ex) {
+                    LOGGER.error("exception during polling, retrying", ex);
+                    try {
+                        Thread.sleep(2000);
+                    } catch (Throwable t) {
+                    }
                 }
-            } catch (InterruptedException ex) {
-                LOGGER.warn("got interrupted, will stop event polling");
             }
         }
 
         private void pollEvents() throws InterruptedException {
-            while (true) {
-                var event = eventAckQueue.poll();
-                if (event == null)
-                    break;
-                try {
-                    if (event.Executed) {
-                        ackEvent(event.EventID);
-                    } else {
-                        nackEvent(event.EventID);
-                    }
-                } catch (Exception e) {
-                    LOGGER.warn("couldn't ack events: " + e);
+            handleAckQueue();
+
+            var body = pollEventQueue();
+            if (body == null)
+                return;
+
+            var gotNewEvents = false;
+            for (var ae : body.ActionExecutions) {
+                // we'll receive events until they get ack'ed/rejected
+                if (handledEventIds.contains(ae.Body.EventID))
+                    continue;
+                gotNewEvents = true;
+                handledEventIds.add(ae.Body.EventID);
+                if (eventCallback != null) {
+                    eventCallback.accept(TangiaSDK.this, ae.Body);
+                } else {
+                    eventQueue.put(ae.Body);
                 }
             }
+            // if we're only getting known (but un-acked) events then we have to throttle down
+            // as the long-polling won't do it for us
+            if (body.ActionExecutions.length > 0 && !gotNewEvents) {
+                Thread.sleep(1000);
+            }
+        }
+
+        private InteractionEventsResp pollEventQueue() throws InterruptedException {
             var eventsCall = api.pollEvents(sessionKey);
             Response<InteractionEventsResp> eventsResp = null;
             try {
@@ -178,38 +200,41 @@ public class TangiaSDK {
                     if (sessionFailCallback != null) {
                         sessionFailCallback.accept("session key got unauthorized");
                     }
-                    return;
+                    return null;
                 }
                 long sleepMS = 1000;
                 if (eventsResp != null && eventsResp.code() == 429) {
                     sleepMS = 3000;
                 }
                 Thread.sleep(sleepMS);
-                return;
+                return null;
             }
+            // as the above is a long-poll we might hang there for long enough to miss a stop and a start, so better check twice
+            if (stopped)
+                return null;
             var body = eventsResp.body();
             if (body == null || body.ActionExecutions == null || body.ActionExecutions.length == 0) {
                 LOGGER.debug("no events");
                 Thread.sleep(50);
-                return;
+                return null;
             }
-            var gotNewEvents = false;
-            for (var ae : body.ActionExecutions) {
-                // we'll receive events until they get ack'ed/rejected
-                if (handledEventIds.contains(ae.Body.EventID))
-                    continue;
-                gotNewEvents = true;
-                handledEventIds.add(ae.Body.EventID);
-                if (eventCallback != null) {
-                    eventCallback.accept(ae.Body);
-                } else {
-                    eventQueue.put(ae.Body);
+            return body;
+        }
+
+        private void handleAckQueue() {
+            while (true) {
+                var event = eventAckQueue.poll();
+                if (event == null)
+                    break;
+                try {
+                    if (event.Executed) {
+                        ackEvent(event.EventID);
+                    } else {
+                        nackEvent(event.EventID);
+                    }
+                } catch (Exception e) {
+                    LOGGER.warn("couldn't ack events: " + e);
                 }
-            }
-            // if we're only getting known (but un-acked) events then we have to throttle down
-            // as the long-polling won't do it for us
-            if (body.ActionExecutions.length > 0 && !gotNewEvents) {
-                Thread.sleep(1000);
             }
         }
 

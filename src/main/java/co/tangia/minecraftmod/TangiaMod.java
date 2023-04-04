@@ -18,7 +18,6 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.contents.LiteralContents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.commands.WhitelistCommand;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
@@ -47,6 +46,7 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
@@ -83,6 +83,12 @@ public class TangiaMod {
 
   private final String integrationInfo = "MC-Fabric Mod";
   private final String versionInfo = "1.19.4";
+
+  record EventReceival(InteractionEvent event, long receivedAt) {
+  }
+
+  private final Map<UUID, Deque<EventReceival>> lastEvents = new HashMap<>();
+
 
   static {
     if (System.getenv("TANGIA_LOGS") == null) {
@@ -182,6 +188,41 @@ public class TangiaMod {
     }
   }
 
+  public void holdEvents(Player player) {
+    var id = player.getUUID();
+    synchronized (playerSDKs) {
+      var sdk = playerSDKs.get(id);
+      if (sdk == null) {
+        return;
+      }
+      sdk.stopEventPolling();
+    }
+  }
+
+  public void resumeEvents(Player player) {
+    var id = player.getUUID();
+    TangiaSDK sdk;
+    synchronized (playerSDKs) {
+      sdk = playerSDKs.get(id);
+    }
+    if (sdk == null) {
+      return;
+    }
+    Deque<EventReceival> events;
+    synchronized (lastEvents) {
+      events = lastEvents.get(id);
+      if (events != null) {
+        var now = System.currentTimeMillis();
+        for (var er : events) {
+          if (er.event.DeathReplaySecs > 0 && now - er.receivedAt < er.event.DeathReplaySecs * 1_000) {
+            processEvent(sdk, er.event, player);
+          }
+        }
+      }
+    }
+    sdk.startEventPolling();
+  }
+
   @SubscribeEvent
   public void onJoin(EntityJoinLevelEvent event) {
     if (!(event.getEntity() instanceof Player player)) {
@@ -205,8 +246,19 @@ public class TangiaMod {
 
   @SubscribeEvent
   public void onPlayerLeave(PlayerEvent.PlayerLoggedOutEvent event) {
-    // TODO figure out if we get a stable identity for players so we can keep their session when they come back
     stopPlaying(event.getEntity(), false);
+  }
+
+  @SubscribeEvent
+  public void onPlayerDeath(LivingDeathEvent event) {
+    if (!(event.getEntity() instanceof Player))
+      return;
+    holdEvents((Player) event.getEntity());
+  }
+
+  @SubscribeEvent
+  public void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
+    resumeEvents(event.getEntity());
   }
 
   @SubscribeEvent
@@ -220,27 +272,38 @@ public class TangiaMod {
       var interaction = sdk.popEventQueue();
       if (interaction == null)
         continue;
-      LOGGER.info("Got event '{}' for '{}' with metadata '{}'", interaction.InteractionID, sdkEntry.getKey(), interaction.Metadata);
+      LOGGER.info("Got event '{}' for '{}' with metadata '{}'", interaction.EventID, sdkEntry.getKey(), interaction.Metadata);
       var player = event.level.getServer().getPlayerList().getPlayer(sdkEntry.getKey());
       if (player == null) {
         LOGGER.warn("Interaction for unavailable player");
         sdk.ackEventAsync(new EventResult(interaction.EventID, false, "player not in game"));
         continue;
       }
-      try {
-        var instantAck = handlePlayerInteraction(interaction, player, sdk);
-        if (instantAck) {
-          sdk.ackEventAsync(new EventResult(interaction.EventID, true, null));
-        }
-      } catch (Exception e) {
-        LOGGER.error("exception in interaction processing", e);
-        sdk.ackEventAsync(new EventResult(interaction.EventID, false, "exception"));
-      }
+      processEvent(sdk, interaction, player);
 
     }
   }
 
-  private boolean handlePlayerInteraction(InteractionEvent interaction, ServerPlayer player, TangiaSDK sdk) {
+  private void processEvent(TangiaSDK sdk, InteractionEvent e, Player p) {
+    synchronized (lastEvents) {
+      var playerLastEvents = lastEvents.computeIfAbsent(p.getUUID(), k -> new LinkedList<>());
+      playerLastEvents.add(new EventReceival(e, System.currentTimeMillis()));
+      if (playerLastEvents.size() > 15) {
+        playerLastEvents.removeFirst();
+      }
+    }
+    try {
+      var instantAck = handlePlayerInteraction(e, p, sdk);
+      if (instantAck) {
+        sdk.ackEventAsync(new EventResult(e.EventID, true, null));
+      }
+    } catch (Exception ex) {
+      LOGGER.error("exception in interaction processing", ex);
+      sdk.ackEventAsync(new EventResult(e.EventID, false, "exception:" + ex.getMessage()));
+    }
+  }
+
+  private boolean handlePlayerInteraction(InteractionEvent interaction, Player player, TangiaSDK sdk) {
     var instantAck = true;
     InspectMetadata inspect = gson.fromJson(interaction.Metadata, InspectMetadata.class);
 
