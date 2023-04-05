@@ -82,7 +82,7 @@ public class TangiaMod {
   private final String tangiaUrl = stagingEnv ? TangiaSDK.STAGING_URL : TangiaSDK.PROD_URL;
 
   private final String integrationInfo = "MC-Fabric Mod";
-  private final String versionInfo = "1.19.4";
+  private final String versionInfo = "1.19.2";
 
   record EventReceival(InteractionEvent event, long receivedAt) {
   }
