@@ -2,12 +2,16 @@ package co.tangia.minecraftmod;
 
 import com.mojang.brigadier.ParseResults;
 import com.mojang.logging.LogUtils;
+import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.contents.LiteralContents;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.phys.Vec2;
+import net.minecraftforge.client.ClientCommandHandler;
+import net.minecraftforge.client.ClientCommandSourceStack;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -62,12 +66,17 @@ public class CommandComponent implements CommandSource {
       return;
     }
     this.stopListening = true;
-    // TODO use right level
-    var stack = new CommandSourceStack(this, event.player.position(), Vec2.ZERO, event.player.getServer().overworld(), 4, "Server", MutableComponent.create(new LiteralContents("Server")), event.player.level.getServer(), null);
-    var res = event.player.level.getServer().getCommands().performPrefixedCommand(stack, this.getMessage());
-    LOGGER.info("Ran command: " + this.getMessage() + " res: " + res);
+    var server = event.player.level.getServer();
+    boolean cmdSuccess;
+    if (server != null) {
+      var stack = new CommandSourceStack(this, event.player.position(), Vec2.ZERO, server.getLevel(event.player.level.dimension()), 4, "Server", MutableComponent.create(new LiteralContents("Server")), server, null);
+      cmdSuccess = server.getCommands().performPrefixedCommand(stack, this.getMessage()) > 0;
+    } else {
+      cmdSuccess = ClientCommandHandler.runCommand(this.getMessage());
+    }
+    LOGGER.info("Ran command: " + this.getMessage() + " res: " + cmdSuccess + " onServer:" + (server != null));
     if (this.ackWaiter != null) {
-      if (res > 0) {
+      if (cmdSuccess) {
         this.ackWaiter.ack(this);
       } else {
         this.ackWaiter.fail(this);
