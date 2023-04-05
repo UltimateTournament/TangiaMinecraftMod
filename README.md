@@ -1,10 +1,12 @@
 # Tangia Minecraft Mod
 
-> ⚠️ This mod is for a Minecraft *SERVER*. So if you want to run single-player, just run a local server.
+> ⚠️ If you run this mod in a single-player world, then your world must have cheats enabled and daytime progress enabled
 
-https://docs.minecraftforge.net/en/latest/gettingstarted/
+You must have [Minecraft Forge](https://docs.minecraftforge.net/en/latest/gettingstarted/) installed.
 
-## Build and test
+Then you can install the [latest release](https://github.com/UltimateTournament/TangiaMinecraftMod/releases)
+
+## To build yourself
 
 `./gradlew build`
 
