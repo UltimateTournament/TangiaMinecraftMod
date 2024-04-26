@@ -59,17 +59,17 @@ public class CommandComponent implements CommandSource {
       MinecraftForge.EVENT_BUS.unregister(this);
       return;
     }
-    if (event.player.level.dayTime() <= this.startTick + this.delayTicks) {
+    if (event.player.level().dayTime() <= this.startTick + this.delayTicks) {
       return;
     }
     if (!this.playerUUID.equals(event.player.getUUID())) {
       return;
     }
     this.stopListening = true;
-    var server = event.player.level.getServer();
+    var server = event.player.level().getServer();
     boolean cmdSuccess;
     if (server != null) {
-      var stack = new CommandSourceStack(this, event.player.position(), Vec2.ZERO, server.getLevel(event.player.level.dimension()), 4, "Server", MutableComponent.create(new LiteralContents("Server")), server, null);
+      var stack = new CommandSourceStack(this, event.player.position(), Vec2.ZERO, server.getLevel(event.player.level().dimension()), 4, "Server", MutableComponent.create(new LiteralContents("Server")), server, null);
       cmdSuccess = server.getCommands().performPrefixedCommand(stack, this.getMessage()) > 0;
     } else {
       cmdSuccess = ClientCommandHandler.runCommand(this.getMessage());

@@ -53,10 +53,10 @@ public class PrimedTntComponent {
             return;
         }
         LOGGER.info("Spawning tnt");
-        var liveTNT = new PrimedTnt(player.level, player.getX()+this.xOffset, player.getY()+this.yOffset, player.getZ()+this.zOffset, null);
+        var liveTNT = new PrimedTnt(player.level(), player.getX()+this.xOffset, player.getY()+this.yOffset, player.getZ()+this.zOffset, null);
         if (this.primeTicks != 0) {
             liveTNT.setFuse(this.primeTicks);
         }
-        player.level.addFreshEntity(liveTNT);
+        player.level().addFreshEntity(liveTNT);
     }
 }

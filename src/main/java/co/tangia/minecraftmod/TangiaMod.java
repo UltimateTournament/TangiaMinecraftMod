@@ -316,8 +316,8 @@ public class TangiaMod {
         ItemStack is = item.getItemStack(interaction.BuyerName);
         // Check if dropping or adding to inventory
         if (item.drop != null && item.drop) {
-          ItemEntity itement = new ItemEntity(player.level, player.getX(), player.getY(), player.getZ(), is);
-          player.level.addFreshEntity(itement);
+          ItemEntity itement = new ItemEntity(player.level(), player.getX(), player.getY(), player.getZ(), is);
+          player.level().addFreshEntity(itement);
         } else {
           player.getInventory().add(is);
         }
@@ -348,14 +348,14 @@ public class TangiaMod {
         }
         instantAck = false;
         // Run the command
-        var cmd = new CommandComponent(player.getName().getString(), interaction.BuyerName, player.getUUID(), command.command, player.level.dayTime(), command.delayTicks, ackWaiter);
+        var cmd = new CommandComponent(player.getName().getString(), interaction.BuyerName, player.getUUID(), command.command, player.level().dayTime(), command.delayTicks, ackWaiter);
         cmd.init();
       }
     }
     if (inspect.chests != null) {
       for (var chest : inspect.chests) {
         // Spawn the chest at the player
-        chest.setBlockEntity(player.level, player.getX(), player.getY(), player.getZ(), interaction.BuyerName);
+        chest.setBlockEntity(player.level(), player.getX(), player.getY(), player.getZ(), interaction.BuyerName);
       }
     }
     if (inspect.kits != null) {
@@ -375,8 +375,8 @@ public class TangiaMod {
           if (randomInt <= currentItem.weight) {
             // Spawn the item
             ItemStack itemStack = currentItem.getItemStack(null);
-            ItemEntity itemEntity = new ItemEntity(player.level, player.getX(), player.getY(), player.getZ(), itemStack);
-            player.level.addFreshEntity(itemEntity);
+            ItemEntity itemEntity = new ItemEntity(player.level(), player.getX(), player.getY(), player.getZ(), itemStack);
+            player.level().addFreshEntity(itemEntity);
             iter++;
           }
         }
@@ -391,7 +391,7 @@ public class TangiaMod {
         }
         message.message = message.message.replaceAll("\\$PLAYERNAME", player.getName().getString());
         if (message.toAllPlayers != null && message.toAllPlayers) {
-          for (var p : player.level.players()) {
+          for (var p : player.level().players()) {
             p.sendSystemMessage(MutableComponent.create(new LiteralContents(message.message)));
 
           }
@@ -403,7 +403,7 @@ public class TangiaMod {
     if (inspect.primedTNT != null) {
       for (var primedTNT : inspect.primedTNT) {
         LOGGER.info("SPAWNING TNT");
-        var tnt = new PrimedTntComponent(player.level.dayTime(), player.getUUID(), primedTNT.xOffset, primedTNT.yOffset, primedTNT.zOffset, primedTNT.primeTicks, primedTNT.delaySeconds);
+        var tnt = new PrimedTntComponent(player.level().dayTime(), player.getUUID(), primedTNT.xOffset, primedTNT.yOffset, primedTNT.zOffset, primedTNT.primeTicks, primedTNT.delaySeconds);
         tnt.init();
       }
     }
@@ -411,14 +411,14 @@ public class TangiaMod {
       LOGGER.info("Spawning {} mobs", inspect.mobs.length);
       for (var mobComponent : inspect.mobs) {
         LOGGER.info("SPAWNING mob with id {}", mobComponent.entityID);
-        Mob mob = mobComponent.getMob(player.level, interaction.BuyerName);
+        Mob mob = mobComponent.getMob(player.level(), interaction.BuyerName);
         mob.setPos(player.getX(), player.getY(), player.getZ());
-        player.level.addFreshEntity(mob);
+        player.level().addFreshEntity(mob);
       }
     }
     if (inspect.sounds != null) {
       for (var soundComponent : inspect.sounds) {
-        var sc = new SoundComponent(player.getUUID(), soundComponent.soundID, soundComponent.delaySeconds, player.level.dayTime());
+        var sc = new SoundComponent(player.getUUID(), soundComponent.soundID, soundComponent.delaySeconds, player.level().dayTime());
         sc.init();
       }
     }
@@ -433,13 +433,13 @@ public class TangiaMod {
       Random rand = new Random();
       var xOffset = -3 + rand.nextInt(4);
       var zOffset = -3 + rand.nextInt(4);
-      LightningBolt lb = new LightningBolt(EntityType.LIGHTNING_BOLT, player.level);
+      LightningBolt lb = new LightningBolt(EntityType.LIGHTNING_BOLT, player.level());
       lb.setPos(player.getX() + xOffset, player.getY(), player.getZ() + zOffset);
-      player.level.addFreshEntity(lb);
+      player.level().addFreshEntity(lb);
     }
     if (inspect.whitelist) {
       // Whitelist the display name if it exists, and whitelist is enabled
-      if (player.level.getServer().isEnforceWhitelist()) {
+      if (player.level().getServer().isEnforceWhitelist()) {
         var wlc = new WhitelistCommand();
       }
     }
