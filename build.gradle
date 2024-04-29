@@ -174,9 +174,9 @@ dependencies {
     // Examples using mod jars from ./libs
     // implementation fg.deobf("blank:coolmod-${mc_version}:${coolmod_version}")
 
-    library 'com.squareup.retrofit2:retrofit:2.9.0'
-    library 'com.squareup.retrofit2:converter-gson:2.9.0'
-    library 'com.google.code.gson:gson:2.9.1'
+    library 'com.squareup.retrofit2:retrofit:2.11.0'
+    library 'com.squareup.retrofit2:converter-gson:2.11.0'
+    library 'com.google.code.gson:gson:2.10.1'
     library 'dev.failsafe:failsafe:3.2.4'
     library 'dev.failsafe:failsafe-retrofit:3.2.4'
     runtimeOnly group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.13.3'
