@@ -311,140 +311,143 @@ public class TangiaMod {
     var instantAck = true;
     InspectMetadata inspect = gson.fromJson(interaction.Metadata, InspectMetadata.class);
 
-    if (inspect.items != null) {
-      for (var item : inspect.items) {
-        ItemStack is = item.getItemStack(interaction.BuyerName);
-        // Check if dropping or adding to inventory
-        if (item.drop != null && item.drop) {
-          ItemEntity itement = new ItemEntity(player.level(), player.getX(), player.getY(), player.getZ(), is);
-          player.level().addFreshEntity(itement);
-        } else {
-          player.getInventory().add(is);
+        if (inspect.items != null) {
+            for (var itemData : inspect.items) {
+                var item = new ItemStackComponent(itemData);
+                ItemStack is = item.getItemStack(interaction.BuyerName);
+                // Check if dropping or adding to inventory
+                if (item.drop != null && item.drop) {
+                    ItemEntity itement = new ItemEntity(player.level(), player.getX(), player.getY(), player.getZ(), is);
+                    player.level().addFreshEntity(itement);
+                } else {
+                    player.getInventory().add(is);
+                }
+                // DEBUG SHULKER
+                // ItemStack shulk = new ItemStack(Items.SHULKER_BOX, 1);
+                // NonNullList<ItemStack> shulkerItems = NonNullList.withSize(27, ItemStack.EMPTY);
+                // CompoundTag shulkNbt = new CompoundTag();
+                // CompoundTag shulkItems = new CompoundTag();
+                // ItemStack axe = new ItemStack(Items.NETHERITE_AXE, 1);
+                // axe.enchant(Enchantments.SHARPNESS, 5);
+                // shulkerItems.set(1, axe);
+                // ContainerHelper.saveAllItems(shulkItems, shulkerItems);
+                // shulkNbt.put("BlockEntityTag", shulkItems);
+                // CompoundTag displayTag = new CompoundTag();
+                // displayTag.putString("Name", Component.Serializer.toJson(MutableComponent.create(new LiteralContents("yeye"))));
+                // shulkNbt.put("display", displayTag);
+                // shulk.setTag(shulkNbt);
+                // player.getInventory().add(shulk);
+            }
         }
-        // DEBUG SHULKER
-        // ItemStack shulk = new ItemStack(Items.SHULKER_BOX, 1);
-        // NonNullList<ItemStack> shulkerItems = NonNullList.withSize(27, ItemStack.EMPTY);
-        // CompoundTag shulkNbt = new CompoundTag();
-        // CompoundTag shulkItems = new CompoundTag();
-        // ItemStack axe = new ItemStack(Items.NETHERITE_AXE, 1);
-        // axe.enchant(Enchantments.SHARPNESS, 5);
-        // shulkerItems.set(1, axe);
-        // ContainerHelper.saveAllItems(shulkItems, shulkerItems);
-        // shulkNbt.put("BlockEntityTag", shulkItems);
-        // CompoundTag displayTag = new CompoundTag();
-        // displayTag.putString("Name", Component.Serializer.toJson(MutableComponent.create(new LiteralContents("yeye"))));
-        // shulkNbt.put("display", displayTag);
-        // shulk.setTag(shulkNbt);
-        // player.getInventory().add(shulk);
-      }
-    }
-    if (inspect.commands != null) {
-      var first = true;
-      for (var command : inspect.commands) {
-        CommandAckWaiter ackWaiter = null;
-        if (first || this.strictMode) {
-          first = false;
-          ackWaiter = new CommandAckWaiter(interaction, sdk);
+        if (inspect.commands != null) {
+            var first = true;
+            for (var command : inspect.commands) {
+                CommandAckWaiter ackWaiter = null;
+                if (first || this.strictMode) {
+                    first = false;
+                    ackWaiter = new CommandAckWaiter(interaction, sdk);
+                }
+                instantAck = false;
+                // Run the command
+                var cmd = new CommandComponent(player.getName().getString(), interaction.BuyerName, player.getUUID(), command.command, player.level().dayTime(), command.delayTicks, ackWaiter);
+                cmd.init();
+            }
         }
-        instantAck = false;
-        // Run the command
-        var cmd = new CommandComponent(player.getName().getString(), interaction.BuyerName, player.getUUID(), command.command, player.level().dayTime(), command.delayTicks, ackWaiter);
-        cmd.init();
-      }
-    }
-    if (inspect.chests != null) {
-      for (var chest : inspect.chests) {
-        // Spawn the chest at the player
-        chest.setBlockEntity(player.level(), player.getX(), player.getY(), player.getZ(), interaction.BuyerName);
-      }
-    }
-    if (inspect.kits != null) {
-      for (var kit : inspect.kits) {
-        var totalWeight = 0;
-        for (var item : kit.items) {
-          // Add up the weights
-          totalWeight += item.weight;
+        if (inspect.chests != null) {
+            for (var chestData : inspect.chests) {
+                var chest = new ChestComponent(chestData);
+                // Spawn the chest at the player
+                chest.setBlockEntity(player.level(), player.getX(), player.getY(), player.getZ(), interaction.BuyerName);
+            }
         }
-        // Keep spawning items
-        Random rand = new Random();
-        var iter = 0;
-        for (int i = 0; i < 10000 && iter < kit.numItems; i++) {
-          // Iterate over items trying to spawn them, try max 1k times
-          int randomInt = rand.nextInt(totalWeight);
-          var currentItem = kit.items[i % kit.items.length];
-          if (randomInt <= currentItem.weight) {
-            // Spawn the item
-            ItemStack itemStack = currentItem.getItemStack(null);
-            ItemEntity itemEntity = new ItemEntity(player.level(), player.getX(), player.getY(), player.getZ(), itemStack);
-            player.level().addFreshEntity(itemEntity);
-            iter++;
-          }
+        if (inspect.kits != null) {
+            for (var kit : inspect.kits) {
+                var totalWeight = 0;
+                for (var item : kit.items) {
+                    // Add up the weights
+                    totalWeight += item.weight;
+                }
+                // Keep spawning items
+                Random rand = new Random();
+                var iter = 0;
+                for (int i = 0; i < 10000 && iter < kit.numItems; i++) {
+                    // Iterate over items trying to spawn them, try max 1k times
+                    int randomInt = rand.nextInt(totalWeight);
+                    var currentItem = kit.items[i % kit.items.length];
+                    if (randomInt <= currentItem.weight) {
+                        // Spawn the item
+                        ItemStack itemStack = currentItem.getItemStack(null);
+                        ItemEntity itemEntity = new ItemEntity(player.level(), player.getX(), player.getY(), player.getZ(), itemStack);
+                        player.level().addFreshEntity(itemEntity);
+                        iter++;
+                    }
+                }
+            }
         }
-      }
-    }
-    if (inspect.messages != null) {
-      for (var message : inspect.messages) {
-        if (interaction.BuyerName == null || interaction.BuyerName.equals("")) {
-          message.message = message.message.replaceAll("\\$DISPLAYNAME", "someone");
-        } else {
-          message.message = message.message.replaceAll("\\$DISPLAYNAME", interaction.BuyerName);
-        }
-        message.message = message.message.replaceAll("\\$PLAYERNAME", player.getName().getString());
-        if (message.toAllPlayers != null && message.toAllPlayers) {
-          for (var p : player.level().players()) {
-            p.sendSystemMessage(MutableComponent.create(new LiteralContents(message.message)));
+        if (inspect.messages != null) {
+            for (var message : inspect.messages) {
+                if (interaction.BuyerName == null || interaction.BuyerName.equals("")) {
+                    message.message = message.message.replaceAll("\\$DISPLAYNAME", "someone");
+                } else {
+                    message.message = message.message.replaceAll("\\$DISPLAYNAME", interaction.BuyerName);
+                }
+                message.message = message.message.replaceAll("\\$PLAYERNAME", player.getName().getString());
+                if (message.toAllPlayers != null && message.toAllPlayers) {
+                    for (var p : player.level().players()) {
+                        p.sendSystemMessage(MutableComponent.create(new LiteralContents(message.message)));
 
-          }
-        } else {
-          player.sendSystemMessage(MutableComponent.create(new LiteralContents(message.message)));
+                    }
+                } else {
+                    player.sendSystemMessage(MutableComponent.create(new LiteralContents(message.message)));
+                }
+            }
         }
-      }
+        if (inspect.primedTNT != null) {
+            for (var primedTNT : inspect.primedTNT) {
+                LOGGER.info("SPAWNING TNT");
+                var tnt = new PrimedTntComponent(player.level().dayTime(), player.getUUID(), primedTNT.xOffset, primedTNT.yOffset, primedTNT.zOffset, primedTNT.primeTicks, primedTNT.delaySeconds);
+                tnt.init();
+            }
+        }
+        if (inspect.mobs != null) {
+            LOGGER.info("Spawning {} mobs", inspect.mobs.length);
+            for (var mobComponentData : inspect.mobs) {
+                var mobComponent = new MobComponent(mobComponentData);
+                LOGGER.info("SPAWNING mob with id {}", mobComponent.entityID);
+                Mob mob = mobComponent.getMob(player.level(), interaction.BuyerName);
+                mob.setPos(player.getX(), player.getY(), player.getZ());
+                player.level().addFreshEntity(mob);
+            }
+        }
+        if (inspect.sounds != null) {
+            for (var soundComponent : inspect.sounds) {
+                var sc = new SoundComponent(player.getUUID(), soundComponent.soundID, soundComponent.delaySeconds, player.level().dayTime());
+                sc.init();
+            }
+        }
+        if (inspect.statuses != null) {
+            for (var statusComponent : inspect.statuses) {
+                MobEffectInstance mei = new MobEffectInstance(ForgeRegistries.MOB_EFFECTS.getValue(new ResourceLocation(statusComponent.statusID)), statusComponent.tickDuration);
+                player.addEffect(mei);
+            }
+        }
+        if (inspect.lightning) {
+            // Pick random block in radius around player
+            Random rand = new Random();
+            var xOffset = -3 + rand.nextInt(4);
+            var zOffset = -3 + rand.nextInt(4);
+            LightningBolt lb = new LightningBolt(EntityType.LIGHTNING_BOLT, player.level());
+            lb.setPos(player.getX() + xOffset, player.getY(), player.getZ() + zOffset);
+            player.level().addFreshEntity(lb);
+        }
+        if (inspect.whitelist) {
+            // Whitelist the display name if it exists, and whitelist is enabled
+            if (player.level().getServer().isEnforceWhitelist()) {
+                var wlc = new WhitelistCommand();
+            }
+        }
+        return instantAck;
     }
-    if (inspect.primedTNT != null) {
-      for (var primedTNT : inspect.primedTNT) {
-        LOGGER.info("SPAWNING TNT");
-        var tnt = new PrimedTntComponent(player.level().dayTime(), player.getUUID(), primedTNT.xOffset, primedTNT.yOffset, primedTNT.zOffset, primedTNT.primeTicks, primedTNT.delaySeconds);
-        tnt.init();
-      }
-    }
-    if (inspect.mobs != null) {
-      LOGGER.info("Spawning {} mobs", inspect.mobs.length);
-      for (var mobComponent : inspect.mobs) {
-        LOGGER.info("SPAWNING mob with id {}", mobComponent.entityID);
-        Mob mob = mobComponent.getMob(player.level(), interaction.BuyerName);
-        mob.setPos(player.getX(), player.getY(), player.getZ());
-        player.level().addFreshEntity(mob);
-      }
-    }
-    if (inspect.sounds != null) {
-      for (var soundComponent : inspect.sounds) {
-        var sc = new SoundComponent(player.getUUID(), soundComponent.soundID, soundComponent.delaySeconds, player.level().dayTime());
-        sc.init();
-      }
-    }
-    if (inspect.statuses != null) {
-      for (var statusComponent : inspect.statuses) {
-        MobEffectInstance mei = new MobEffectInstance(ForgeRegistries.MOB_EFFECTS.getValue(new ResourceLocation(statusComponent.statusID)), statusComponent.tickDuration);
-        player.addEffect(mei);
-      }
-    }
-    if (inspect.lightning) {
-      // Pick random block in radius around player
-      Random rand = new Random();
-      var xOffset = -3 + rand.nextInt(4);
-      var zOffset = -3 + rand.nextInt(4);
-      LightningBolt lb = new LightningBolt(EntityType.LIGHTNING_BOLT, player.level());
-      lb.setPos(player.getX() + xOffset, player.getY(), player.getZ() + zOffset);
-      player.level().addFreshEntity(lb);
-    }
-    if (inspect.whitelist) {
-      // Whitelist the display name if it exists, and whitelist is enabled
-      if (player.level().getServer().isEnforceWhitelist()) {
-        var wlc = new WhitelistCommand();
-      }
-    }
-    return instantAck;
-  }
 
   @Mod.EventBusSubscriber(modid = "tangia", bus = Bus.FORGE, value = Dist.CLIENT)
   public static class MyStaticClientOnlyEventHandler {

@@ -5,6 +5,10 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraftforge.registries.ForgeRegistries;
 
 public class StatusComponent {
+  public static class Data {
+    public String statusID;
+    public int tickDuration;
+  }
   public String statusID;
   public int tickDuration;
 

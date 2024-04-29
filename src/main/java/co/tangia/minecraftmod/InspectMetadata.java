@@ -1,16 +1,16 @@
 package co.tangia.minecraftmod;
 
 public class InspectMetadata {
-  public ChestComponent[] chests;
-  public CommandComponent[] commands;
-  public ItemStackComponent[] items;
-  public MessageComponent[] messages;
-  public MobComponent[] mobs;
-  public SoundComponent[] sounds;
-  public StatusComponent[] statuses;
-  public KitComponent[] kits;
+  public ChestComponent.Data[] chests;
+  public CommandComponent.Data[] commands;
+  public ItemStackComponent.Data[] items;
+  public MessageComponentData[] messages;
+  public MobComponent.Data[] mobs;
+  public SoundComponent.Data[] sounds;
+  public StatusComponent.Data[] statuses;
+  public KitComponentData[] kits;
 
-  public PrimedTntComponent[] primedTNT;
+  public PrimedTntComponent.Data[] primedTNT;
 
   public boolean lightning;
   public boolean whitelist;

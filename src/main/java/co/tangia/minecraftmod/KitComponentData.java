@@ -1,6 +1,6 @@
 package co.tangia.minecraftmod;
 
-public class KitComponent {
+public class KitComponentData {
   public ItemStackComponent[] items;
   public int numItems;
 }

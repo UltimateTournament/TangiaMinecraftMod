@@ -12,11 +12,19 @@ import java.util.UUID;
 
 @Mod.EventBusSubscriber
 public class PrimedTntComponent {
+    public static class Data {
+        public int primeTicks;
+        public float xOffset;
+        public float yOffset;
+        public float zOffset;
+        public int delaySeconds;
+    }
     public int primeTicks;
     public float xOffset;
     public float yOffset;
     public float zOffset;
     public int delaySeconds;
+
     private final long startTick;
     private boolean stopListening;
     private final UUID playerUUID;

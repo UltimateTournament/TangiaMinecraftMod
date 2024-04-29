@@ -13,8 +13,13 @@ import java.util.UUID;
 
 @Mod.EventBusSubscriber
 public class SoundComponent {
+    public static class Data {
+        public String soundID;
+        public int delaySeconds;
+    }
     public String soundID;
     public int delaySeconds;
+
     private final long startTick;
     private boolean stopListening;
     private final UUID playerUUID;

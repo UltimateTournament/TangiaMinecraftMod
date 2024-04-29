@@ -12,12 +12,29 @@ import net.minecraft.world.level.Level;
 import net.minecraftforge.registries.ForgeRegistries;
 
 public class MobComponent {
+  public static class Data {
+    public String entityID;
+    public Map<String, Boolean> nbtBools;
+    public Map<String, String> nbtStrings;
+    public Map<String, Integer> nbtInts;
+    public String customName;
+    public Boolean noAI;
+  }
   public String entityID;
   public Map<String, Boolean> nbtBools;
   public Map<String, String> nbtStrings;
   public Map<String, Integer> nbtInts;
   public String customName;
   public Boolean noAI;
+
+  public MobComponent(Data data) {
+    this.entityID = data.entityID;
+    this.nbtBools = data.nbtBools;
+    this.nbtStrings = data.nbtStrings;
+    this.nbtInts = data.nbtInts;
+    this.customName = data.customName;
+    this.noAI = data.noAI;
+  }
 
   public Mob getMob(Level level, String displayName) {
     Entity entity = ForgeRegistries.ENTITY_TYPES.getValue(new ResourceLocation(this.entityID)).create(level);

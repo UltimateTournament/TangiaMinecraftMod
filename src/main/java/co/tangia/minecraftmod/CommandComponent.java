@@ -19,13 +19,21 @@ import org.slf4j.Logger;
 
 import java.util.UUID;
 
+
 public class CommandComponent implements CommandSource {
+  public static class Data {
+    public String command;
+    public String playerName;
+    public String displayName;
+    public int delayTicks;
+  }
   public String command;
   public String playerName;
   public String displayName;
+  public int delayTicks;
+
   private final long startTick;
   private boolean stopListening;
-  public int delayTicks;
   private final TangiaMod.CommandAckWaiter ackWaiter;
   private final UUID playerUUID;
   private static final Logger LOGGER = LogUtils.getLogger();
