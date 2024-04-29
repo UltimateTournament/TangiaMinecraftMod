@@ -73,243 +73,249 @@ import java.util.stream.Collectors;
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod("tangia")
 public class TangiaMod {
-  // Directly reference a slf4j logger
-  private static final Logger LOGGER = LogUtils.getLogger();
-  private final Gson gson = new GsonBuilder().addReflectionAccessFilter(ReflectionAccessFilter.BLOCK_INACCESSIBLE_JAVA).create();
-  private final Map<UUID, TangiaSDK> playerSDKs = new HashMap<>();
-  private final boolean strictMode = "STRICT".equals(System.getenv("TANGIA_CMD_MODE"));
-  private final boolean stagingEnv = "STAGING".equals(System.getenv("TANGIA_ENV"));
-  private final String tangiaUrl = stagingEnv ? TangiaSDK.STAGING_URL : TangiaSDK.PROD_URL;
+    // Directly reference a slf4j logger
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private final Gson gson = new GsonBuilder().addReflectionAccessFilter(ReflectionAccessFilter.BLOCK_INACCESSIBLE_JAVA).create();
+    private final Map<UUID, TangiaSDK> playerSDKs = new HashMap<>();
+    private final boolean strictMode = "STRICT".equals(System.getenv("TANGIA_CMD_MODE"));
+    private final boolean stagingEnv = "STAGING".equals(System.getenv("TANGIA_ENV"));
+    private final String tangiaUrl = stagingEnv ? TangiaSDK.STAGING_URL : TangiaSDK.PROD_URL;
 
-  private final String integrationInfo = "MC-Fabric Mod";
-  private final String versionInfo = "1.19.2";
+    private final String integrationInfo = "MC-Fabric Mod";
+    private final String versionInfo = "1.19.2";
 
-  record EventReceival(InteractionEvent event, long receivedAt) {
-  }
-
-  private final Map<UUID, Deque<EventReceival>> lastEvents = new HashMap<>();
-
-  static {
-    if (System.getenv("TANGIA_LOGS") == null) {
-      LOGGER.info("Disabling logging for Tangia. To re-enable set the env var TANGIA_LOGS=1");
-      try {
-        org.apache.logging.log4j.core.config.Configurator.setLevel("co.tangia", org.apache.logging.log4j.Level.ERROR);
-      } catch (Exception ex) {
-        LOGGER.error("failed to set log level", ex);
-      }
+    record EventReceival(InteractionEvent event, long receivedAt) {
     }
-  }
 
-  public TangiaMod() {
-    // Register the setup method for modloading
-    FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
-    // Register the enqueueIMC method for modloading
-    FMLJavaModLoadingContext.get().getModEventBus().addListener(this::enqueueIMC);
-    // Register the processIMC method for modloading
-    FMLJavaModLoadingContext.get().getModEventBus().addListener(this::processIMC);
+    private final Map<UUID, Deque<EventReceival>> lastEvents = new HashMap<>();
 
-    // Register ourselves for server and other game events we are interested in
-    MinecraftForge.EVENT_BUS.register(this);
-  }
-
-  private void setup(final FMLCommonSetupEvent event) {
-    // some preinit code
-    LOGGER.info("HELLO FROM PREINIT");
-  }
-
-  private void enqueueIMC(final InterModEnqueueEvent event) {
-    // Some example code to dispatch IMC to another mod
-    InterModComms.sendTo("examplemod", "helloworld", () -> {
-      LOGGER.info("Hello world from the MDK");
-      return "Hello world";
-    });
-  }
-
-  private void processIMC(final InterModProcessEvent event) {
-    // Some example code to receive and process InterModComms from other mods
-    LOGGER.info("Got IMC {}", event.getIMCStream().
-        map(m -> m.messageSupplier().get()).
-        collect(Collectors.toList()));
-  }
-
-  // You can use SubscribeEvent and let the Event Bus discover methods to call
-  @SubscribeEvent
-  public void onServerStarting(ServerStartingEvent event) {
-    LOGGER.info("Tangia Mod starting");
-    ModPersistence.load();
-  }
-
-  @SubscribeEvent
-  public void onCommandsRegister(RegisterCommandsEvent event) {
-    ConfigCommand.register(event.getDispatcher());
-
-    new LoginCommand(this).register(event.getDispatcher());
-    new LogoutCommand(this).register(event.getDispatcher());
-    String features = System.getenv("TANGIA_MOD_FEATURES");
-    if (features == null) {
-      features = "";
+    static {
+        if (System.getenv("TANGIA_LOGS") == null) {
+            LOGGER.info("Disabling logging for Tangia. To re-enable set the env var TANGIA_LOGS=1");
+            try {
+                org.apache.logging.log4j.core.config.Configurator.setLevel("co.tangia", org.apache.logging.log4j.Level.ERROR);
+            } catch (Exception ex) {
+                LOGGER.error("failed to set log level", ex);
+            }
+        }
     }
-    if (features.contains("TOWER")) {
-      new TowerCommand().register(event.getDispatcher());
-    }
-  }
 
-  public void login(Player player, String code) throws InvalidLoginException, IOException {
-    var id = player.getUUID();
-    var sdk = new TangiaSDK(tangiaUrl, versionInfo, integrationInfo, (reason) -> stopPlaying(player, true), null);
-    sdk.login(code);
-    synchronized (playerSDKs) {
-      if (playerSDKs.get(id) != null)
-        playerSDKs.get(id).stopEventPolling();
-      playerSDKs.put(id, sdk);
-    }
-    sdk.startEventPolling();
-    ModPersistence.data.sessions().put(id, new ModPersistenceData.PlayerSession(sdk.getSessionKey()));
-    ModPersistence.store();
-  }
+    public TangiaMod() {
+        // Register the setup method for modloading
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
+        // Register the enqueueIMC method for modloading
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::enqueueIMC);
+        // Register the processIMC method for modloading
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::processIMC);
 
-  public void stopPlaying(Player player, boolean removeSession) {
-    synchronized (playerSDKs) {
-      var id = player.getUUID();
-      var sdk = playerSDKs.get(id);
-      if (sdk != null) {
-        sdk.stopEventPolling();
-        playerSDKs.remove(id);
-      }
-      if (removeSession) {
-        ModPersistence.data.sessions().remove(player.getUUID());
+        // Register ourselves for server and other game events we are interested in
+        MinecraftForge.EVENT_BUS.register(this);
+    }
+
+    private void setup(final FMLCommonSetupEvent event) {
+        // some preinit code
+        LOGGER.info("HELLO FROM PREINIT");
+    }
+
+    private void enqueueIMC(final InterModEnqueueEvent event) {
+        // Some example code to dispatch IMC to another mod
+        InterModComms.sendTo("examplemod", "helloworld", () -> {
+            LOGGER.info("Hello world from the MDK");
+            return "Hello world";
+        });
+    }
+
+    private void processIMC(final InterModProcessEvent event) {
+        // Some example code to receive and process InterModComms from other mods
+        LOGGER.info("Got IMC {}", event.getIMCStream().
+                map(m -> m.messageSupplier().get()).
+                collect(Collectors.toList()));
+    }
+
+    // You can use SubscribeEvent and let the Event Bus discover methods to call
+    @SubscribeEvent
+    public void onServerStarting(ServerStartingEvent event) {
+        LOGGER.info("Tangia Mod starting");
+        ModPersistence.load();
+    }
+
+    @SubscribeEvent
+    public void onCommandsRegister(RegisterCommandsEvent event) {
+        ConfigCommand.register(event.getDispatcher());
+
+        new LoginCommand(this).register(event.getDispatcher());
+        new LogoutCommand(this).register(event.getDispatcher());
+        String features = System.getenv("TANGIA_MOD_FEATURES");
+        if (features == null) {
+            features = "";
+        }
+        if (features.contains("TOWER")) {
+            new TowerCommand().register(event.getDispatcher());
+        }
+    }
+
+    public void login(Player player, String code) throws InvalidLoginException, IOException {
+        var id = player.getUUID();
+        var sdk = new TangiaSDK(tangiaUrl, versionInfo, integrationInfo, (reason) -> stopPlaying(player, true), null);
+        try {
+            sdk.login(code);
+        } catch (Exception ex) {
+            player.sendSystemMessage(MutableComponent.create(new LiteralContents("We failed to log you in: " + ex.getMessage())));
+            return;
+        }
+        synchronized (playerSDKs) {
+            if (playerSDKs.get(id) != null)
+                playerSDKs.get(id).stopEventPolling();
+            playerSDKs.put(id, sdk);
+        }
+        sdk.startEventPolling();
+        ModPersistence.data.sessions().put(id, new ModPersistenceData.PlayerSession(sdk.getSessionKey()));
         ModPersistence.store();
-        if (sdk != null) {
-          sdk.logout();
+        player.sendSystemMessage(MutableComponent.create(new LiteralContents("Your Tangia is now connected")));
+    }
+
+    public void stopPlaying(Player player, boolean removeSession) {
+        synchronized (playerSDKs) {
+            var id = player.getUUID();
+            var sdk = playerSDKs.get(id);
+            if (sdk != null) {
+                sdk.stopEventPolling();
+                playerSDKs.remove(id);
+            }
+            if (removeSession) {
+                ModPersistence.data.sessions().remove(player.getUUID());
+                ModPersistence.store();
+                if (sdk != null) {
+                    sdk.logout();
+                }
+                player.sendSystemMessage(MutableComponent.create(new LiteralContents("We've logged you out of your Tangia account")));
+            }
         }
-        player.sendSystemMessage(MutableComponent.create(new LiteralContents("We've logged you out of your Tangia account")));
-      }
     }
-  }
 
-  public void holdEvents(Player player) {
-    var id = player.getUUID();
-    synchronized (playerSDKs) {
-      var sdk = playerSDKs.get(id);
-      if (sdk == null) {
-        return;
-      }
-      sdk.stopEventPolling();
-    }
-  }
-
-  public void resumeEvents(Player player) {
-    var id = player.getUUID();
-    TangiaSDK sdk;
-    synchronized (playerSDKs) {
-      sdk = playerSDKs.get(id);
-    }
-    if (sdk == null) {
-      return;
-    }
-    Deque<EventReceival> events;
-    synchronized (lastEvents) {
-      events = lastEvents.get(id);
-    }
-    if (events != null) {
-      synchronized (events) {
-        var now = System.currentTimeMillis();
-        for (var er : events) {
-          if (er.event.DeathReplaySecs > 0 && now - er.receivedAt < er.event.DeathReplaySecs * 1_000) {
-            processEvent(sdk, er.event, player);
-          }
+    public void holdEvents(Player player) {
+        var id = player.getUUID();
+        synchronized (playerSDKs) {
+            var sdk = playerSDKs.get(id);
+            if (sdk == null) {
+                return;
+            }
+            sdk.stopEventPolling();
         }
-      }
     }
-    sdk.startEventPolling();
-  }
 
-  @SubscribeEvent
-  public void onJoin(EntityJoinLevelEvent event) {
-    if (!(event.getEntity() instanceof Player player)) {
-      return;
-    }
-    LOGGER.info("Player with UUID {} joined", player.getUUID());
-    UUID playerUUID = player.getUUID();
-    if (playerSDKs.get(playerUUID) != null) {
-      return;
-    }
-    var session = ModPersistence.data.sessions().get(playerUUID);
-    if (session != null) {
-      var sdk = new TangiaSDK(tangiaUrl, versionInfo, integrationInfo, (reason) -> stopPlaying(player, true), null);
-      sdk.setSessionKey(session.sessionToken());
-      playerSDKs.put(playerUUID, sdk);
-      sdk.startEventPolling();
-      LOGGER.info("Tangia session restored for Player with UUID {}", playerUUID);
-      player.sendSystemMessage(MutableComponent.create(new LiteralContents("We've logged you back into your Tangia account")));
-    }
-  }
-
-  @SubscribeEvent
-  public void onPlayerLeave(PlayerEvent.PlayerLoggedOutEvent event) {
-    stopPlaying(event.getEntity(), false);
-  }
-
-  @SubscribeEvent
-  public void onPlayerDeath(LivingDeathEvent event) {
-    if (!(event.getEntity() instanceof Player))
-      return;
-    holdEvents((Player) event.getEntity());
-  }
-
-  @SubscribeEvent
-  public void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
-    resumeEvents(event.getEntity());
-  }
-
-  @SubscribeEvent
-  public void onTick(TickEvent.LevelTickEvent event) {
-    if (event.side != LogicalSide.SERVER)
-      return;
-    for (var sdkEntry : playerSDKs.entrySet()) {
-      var sdk = sdkEntry.getValue();
-      if (sdk == null)
-        continue;
-      var interaction = sdk.popEventQueue();
-      if (interaction == null)
-        continue;
-      var player = event.level.getServer().getPlayerList().getPlayer(sdkEntry.getKey());
-      if (player == null) {
-        LOGGER.warn("Interaction for unavailable player");
-        sdk.ackEventAsync(new EventResult(interaction.EventID, false, "player not in game"));
-        continue;
-      }
-      LOGGER.info("Got event '{}' for '{}' with metadata '{}'", interaction.EventID, sdkEntry.getKey(), interaction.Metadata);
-      Deque<EventReceival> playerLastEvents;
-      synchronized (lastEvents) {
-        playerLastEvents = lastEvents.computeIfAbsent(player.getUUID(), k -> new LinkedList<>());
-      }
-      synchronized (playerLastEvents) {
-        playerLastEvents.add(new EventReceival(interaction, System.currentTimeMillis()));
-        if (playerLastEvents.size() > 15) {
-          playerLastEvents.removeFirst();
+    public void resumeEvents(Player player) {
+        var id = player.getUUID();
+        TangiaSDK sdk;
+        synchronized (playerSDKs) {
+            sdk = playerSDKs.get(id);
         }
-      }
-      processEvent(sdk, interaction, player);
-
+        if (sdk == null) {
+            return;
+        }
+        Deque<EventReceival> events;
+        synchronized (lastEvents) {
+            events = lastEvents.get(id);
+        }
+        if (events != null) {
+            synchronized (events) {
+                var now = System.currentTimeMillis();
+                for (var er : events) {
+                    if (er.event.DeathReplaySecs > 0 && now - er.receivedAt < er.event.DeathReplaySecs * 1_000) {
+                        processEvent(sdk, er.event, player);
+                    }
+                }
+            }
+        }
+        sdk.startEventPolling();
     }
-  }
 
-  private void processEvent(TangiaSDK sdk, InteractionEvent e, Player p) {
-    try {
-      var instantAck = handlePlayerInteraction(e, p, sdk);
-      if (instantAck) {
-        sdk.ackEventAsync(new EventResult(e.EventID, true, null));
-      }
-    } catch (Exception ex) {
-      LOGGER.error("exception in interaction processing", ex);
-      sdk.ackEventAsync(new EventResult(e.EventID, false, "exception:" + ex.getMessage()));
+    @SubscribeEvent
+    public void onJoin(EntityJoinLevelEvent event) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
+        LOGGER.info("Player with UUID {} joined", player.getUUID());
+        UUID playerUUID = player.getUUID();
+        if (playerSDKs.get(playerUUID) != null) {
+            return;
+        }
+        var session = ModPersistence.data.sessions().get(playerUUID);
+        if (session != null) {
+            var sdk = new TangiaSDK(tangiaUrl, versionInfo, integrationInfo, (reason) -> stopPlaying(player, true), null);
+            sdk.setSessionKey(session.sessionToken());
+            playerSDKs.put(playerUUID, sdk);
+            sdk.startEventPolling();
+            LOGGER.info("Tangia session restored for Player with UUID {}", playerUUID);
+            player.sendSystemMessage(MutableComponent.create(new LiteralContents("We've logged you back into your Tangia account")));
+        }
     }
-  }
 
-  private boolean handlePlayerInteraction(InteractionEvent interaction, Player player, TangiaSDK sdk) {
-    var instantAck = true;
-    InspectMetadata inspect = gson.fromJson(interaction.Metadata, InspectMetadata.class);
+    @SubscribeEvent
+    public void onPlayerLeave(PlayerEvent.PlayerLoggedOutEvent event) {
+        stopPlaying(event.getEntity(), false);
+    }
+
+    @SubscribeEvent
+    public void onPlayerDeath(LivingDeathEvent event) {
+        if (!(event.getEntity() instanceof Player))
+            return;
+        holdEvents((Player) event.getEntity());
+    }
+
+    @SubscribeEvent
+    public void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
+        resumeEvents(event.getEntity());
+    }
+
+    @SubscribeEvent
+    public void onTick(TickEvent.LevelTickEvent event) {
+        if (event.side != LogicalSide.SERVER)
+            return;
+        for (var sdkEntry : playerSDKs.entrySet()) {
+            var sdk = sdkEntry.getValue();
+            if (sdk == null)
+                continue;
+            var interaction = sdk.popEventQueue();
+            if (interaction == null)
+                continue;
+            var player = event.level.getServer().getPlayerList().getPlayer(sdkEntry.getKey());
+            if (player == null) {
+                LOGGER.warn("Interaction for unavailable player");
+                sdk.ackEventAsync(new EventResult(interaction.EventID, false, "player not in game"));
+                continue;
+            }
+            LOGGER.info("Got event '{}' for '{}' with metadata '{}'", interaction.EventID, sdkEntry.getKey(), interaction.Metadata);
+            Deque<EventReceival> playerLastEvents;
+            synchronized (lastEvents) {
+                playerLastEvents = lastEvents.computeIfAbsent(player.getUUID(), k -> new LinkedList<>());
+            }
+            synchronized (playerLastEvents) {
+                playerLastEvents.add(new EventReceival(interaction, System.currentTimeMillis()));
+                if (playerLastEvents.size() > 15) {
+                    playerLastEvents.removeFirst();
+                }
+            }
+            processEvent(sdk, interaction, player);
+
+        }
+    }
+
+    private void processEvent(TangiaSDK sdk, InteractionEvent e, Player p) {
+        try {
+            var instantAck = handlePlayerInteraction(e, p, sdk);
+            if (instantAck) {
+                sdk.ackEventAsync(new EventResult(e.EventID, true, null));
+            }
+        } catch (Exception ex) {
+            LOGGER.error("exception in interaction processing", ex);
+            sdk.ackEventAsync(new EventResult(e.EventID, false, "exception:" + ex.getMessage()));
+        }
+    }
+
+    private boolean handlePlayerInteraction(InteractionEvent interaction, Player player, TangiaSDK sdk) {
+        var instantAck = true;
+        InspectMetadata inspect = gson.fromJson(interaction.Metadata, InspectMetadata.class);
 
         if (inspect.items != null) {
             for (var itemData : inspect.items) {
@@ -449,254 +455,254 @@ public class TangiaMod {
         return instantAck;
     }
 
-  @Mod.EventBusSubscriber(modid = "tangia", bus = Bus.FORGE, value = Dist.CLIENT)
-  public static class MyStaticClientOnlyEventHandler {
-    @SubscribeEvent
-    public static void onChatEvent(ClientChatEvent event) {
-      LOGGER.info("Got chat message '{}'", event.getMessage());
-    }
-
-    // @SubscribeEvent
-    // public static void onKeyPressEvent(InputEvent.KeyInputEvent event) {
-    //     LOGGER.info("pressed '{} - {}'", event.getKey(), event.getAction());
-    //     if (event.getKey() == 71 && event.getAction() == 0) {
-    //         // pressed g
-    //         var instance = Minecraft.getInstance();
-    //         var x = instance.player.getX();
-    //         var y = instance.player.getY();
-    //         var z = instance.player.getZ();
-    //         Creeper creeper = new Creeper(EntityType.CREEPER, instance.world);
-
-    //         LOGGER.info("spawning creeper at {}, {}, {}", x+1, y+1, z+1);
-
-    //         // var creeper = ;
-    //         // SpawnEntity()
-    //     }
-    // }
-  }
-
-
-  @Mod.EventBusSubscriber(modid = "tangia", bus = Bus.FORGE)
-  public static class MyStaticServerOnlyEventHandler {
-    @SubscribeEvent
-    public static void onInteractBlockEvent(PlayerInteractEvent.RightClickBlock event) {
-      //LOGGER.info("Got block interaction event '{}'", event.toString());
-    }
-
-    @SubscribeEvent
-    public static void onInteractEmptyEvent(PlayerInteractEvent.RightClickEmpty event) {
-      //LOGGER.info("Got empty interaction event '{}'", event.toString());
-    }
-
-    @SubscribeEvent
-    public static void onInteractEvent(PlayerInteractEvent.RightClickItem event) {
-      //LOGGER.info("Got interaction event '{}'", event.toString());
-      //LOGGER.info("Got interaction item '{}'", event.getItemStack());
-      var gameId = System.getenv("DEBUG");
-      if (gameId == null) {
-        return;
-      }
-
-      // Spawn live TNT above someone's head
-      // Play a delayed sound
-      var exece = new ScheduledThreadPoolExecutor(1);
-      var level = event.getLevel();
-      var player = event.getEntity();
-      exece.schedule(() -> {
-        var liveTNT = new PrimedTnt(level, event.getEntity().getX(), event.getEntity().getY() + 5, event.getEntity().getZ(), null);
-        liveTNT.setFuse(30);
-        level.addFreshEntity(liveTNT);
-      }, 1, TimeUnit.SECONDS);
-      exece.schedule(() -> {
-        var liveTNT = new PrimedTnt(level, event.getEntity().getX(), event.getEntity().getY() + 5, event.getEntity().getZ(), null);
-        liveTNT.setFuse(30);
-        level.addFreshEntity(liveTNT);
-      }, 2, TimeUnit.SECONDS);
-      exece.schedule(() -> {
-        var liveTNT = new PrimedTnt(level, event.getEntity().getX(), event.getEntity().getY() + 5, event.getEntity().getZ(), null);
-        liveTNT.setFuse(30);
-        level.addFreshEntity(liveTNT);
-      }, 3, TimeUnit.SECONDS);
-
-      Creeper creeper = new Creeper(EntityType.CREEPER, level);
-      creeper.setPos(player.getX(), player.getY(), player.getZ());
-      CompoundTag nbt = creeper.serializeNBT();
-      nbt.putBoolean("powered", true);
-      creeper.deserializeNBT(nbt);
-      creeper.setNoAi(true);
-      creeper.setCustomNameVisible(true);
-      var name = MutableComponent.create(new LiteralContents("edrique"));
-      creeper.setCustomName(name);
-      creeper.addTag("test tag");
-      // LightningBolt lb = new LightningBolt(EntityType.LIGHTNING_BOLT, world);
-      // lb.setPos(player.getX(), player.getY(), player.getZ());
-      level.addFreshEntity(creeper);
-
-      // add item to inventory
-      Item item = Items.TOTEM_OF_UNDYING;
-
-      ItemStack totem = new ItemStack(item, 1);
-      totem.setHoverName(name);
-
-      ItemStack sword = new ItemStack(Items.NETHERITE_HOE, 1);
-      sword.enchant(Enchantments.SHARPNESS, 5);
-      sword.setHoverName(name);
-      player.getInventory().add(totem);
-      player.getInventory().add(sword);
-
-      var kelp = new ItemStack(Items.DRIED_KELP_BLOCK, 1);
-      kelp.setHoverName(MutableComponent.create(new LiteralContents("kit - hehe")));
-      player.getInventory().add(kelp);
-
-      BlockPos bp = new BlockPos((int) player.getX(), (int) player.getY(), (int) (player.getZ() + 1));
-      level.setBlockAndUpdate(bp, Blocks.CHEST.defaultBlockState());
-      ChestBlockEntity cbe = new ChestBlockEntity(bp, Blocks.CHEST.defaultBlockState());
-      cbe.setCustomName(MutableComponent.create(new LiteralContents("pepechest")));
-      for (int slot = 0; slot < 5; slot++) {
-        Item iteme = Items.TOTEM_OF_UNDYING;
-        ItemStack toteme = new ItemStack(iteme, 1);
-        toteme.setHoverName(MutableComponent.create(new LiteralContents("hehe")));
-        cbe.setItem(slot, toteme);
-      }
-      level.setBlockEntity(cbe);
-      // world.addFreshEntity(lb);
-
-      // spawn lightning where player is looking
-      // LightningBolt entityToSpawn = EntityType.LIGHTNING_BOLT.create(world);
-      // entityToSpawn.moveTo(Vec3.atBottomCenterOf(new BlockPos(
-      // 		player.world.clip(new ClipContext(player.getEyePosition(1f), player.getEyePosition(1f).add(player.getViewVector(1f).scale(100)),
-      // 				ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player)).getBlockPos().getX(),
-      // 		player.world.clip(new ClipContext(player.getEyePosition(1f), player.getEyePosition(1f).add(player.getViewVector(1f).scale(100)),
-      // 				ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player)).getBlockPos().getY(),
-      // 		player.world.clip(new ClipContext(player.getEyePosition(1f), player.getEyePosition(1f).add(player.getViewVector(1f).scale(100)),
-      // 				ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player)).getBlockPos().getZ())));
-      // entityToSpawn.setVisualOnly(false);
-      // world.addFreshEntity(entityToSpawn);
-
-      // spawn ghast where player is looking
-      // Ghast entityToSpawn = EntityType.GHAST.create(world);
-      Entity entityToSpawn = ForgeRegistries.ENTITY_TYPES.getValue(new ResourceLocation("donkey")).create(level);
-      entityToSpawn.moveTo(Vec3.atBottomCenterOf(new BlockPos(
-          level.clip(new ClipContext(player.getEyePosition(1f), player.getEyePosition(1f).add(player.getViewVector(1f).scale(100)),
-              ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player)).getBlockPos().getX(),
-          level.clip(new ClipContext(player.getEyePosition(1f), player.getEyePosition(1f).add(player.getViewVector(1f).scale(100)),
-              ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player)).getBlockPos().getY(),
-          level.clip(new ClipContext(player.getEyePosition(1f), player.getEyePosition(1f).add(player.getViewVector(1f).scale(100)),
-              ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player)).getBlockPos().getZ())));
-      if (entityToSpawn instanceof Mob mob) {
-        mob.setNoAi(true);
-        level.addFreshEntity(mob);
-      }
-
-
-      // apply a status effect
-      MobEffectInstance mei = new MobEffectInstance(ForgeRegistries.MOB_EFFECTS.getValue(new ResourceLocation("strength")), 200);
-      // MobEffectInstance mei = new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100);
-      player.addEffect(mei);
-      // player.getName().getContents();
-
-      player.sendSystemMessage(MutableComponent.create(new LiteralContents("personal message")));
-
-
-      // drop an item
-      ItemStack mossyblock = new ItemStack(ForgeRegistries.ITEMS.getValue(new ResourceLocation("minecraft:mossy_stone_brick_stairs")), 1);
-      mossyblock.enchant(ForgeRegistries.ENCHANTMENTS.getValue(new ResourceLocation("protection")), 3);
-      ItemEntity itement = new ItemEntity(level, player.getX(), player.getY(), player.getZ(), mossyblock);
-      level.addFreshEntity(itement);
-
-      String testobj = "{\"chestName\":\"hello\",\"items\":[{\"itemID\":\"hey\"}]}";
-
-      Gson gson = new Gson();
-      ChestComponent actualObj = gson.fromJson(testobj, ChestComponent.class);
-      LOGGER.info("actual obj - {}", gson.toJson(actualObj));
-
-      // play a sound
-      level.playSound(player, event.getPos(), ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("entity.lightning_bolt.thunder")), SoundSource.AMBIENT, 1f, 1f);
-      level.playSound(player, event.getPos(), ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("entity.lightning_bolt.impact")), SoundSource.AMBIENT, 1f, 1f);
-
-      // Play a delayed sound
-      ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(1);
-      exec.schedule(() -> {
-        level.playSound(player, event.getPos(), ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("entity.creeper.primed")), SoundSource.AMBIENT, 1f, 1f);
-        level.playSound(player, event.getPos(), ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("entity.creeper.primed")), SoundSource.AMBIENT, 1f, 1f);
-      }, 1, TimeUnit.SECONDS);
-    }
-
-    @SubscribeEvent
-    public static void onMobDrops(LivingDropsEvent event) {
-      LOGGER.info("------ GOT LIVING DROP EVENT");
-      Entity entity = event.getEntity();
-      LOGGER.info("GOT TAGS {}", entity.getTags());
-    }
-
-    @SubscribeEvent
-    public static void onLeverEvent(PlayerInteractEvent.RightClickBlock event) {
-      BlockPos bp = event.getPos();
-      var blockState = event.getLevel().getBlockState(bp);
-      LOGGER.info("Interacted with block - {}", blockState.getBlock().getName());
-      BlockEntity b = event.getLevel().getBlockEntity(bp);
-      if (b instanceof ShulkerBoxBlockEntity sbe) {
-        var textcomp = sbe.getCustomName();
-        if (textcomp != null) {
-          String thestring = textcomp.getString();
-          LOGGER.info("INTERACTED WITH SHULKER BLOCK - '{}'", thestring);
+    @Mod.EventBusSubscriber(modid = "tangia", bus = Bus.FORGE, value = Dist.CLIENT)
+    public static class MyStaticClientOnlyEventHandler {
+        @SubscribeEvent
+        public static void onChatEvent(ClientChatEvent event) {
+            LOGGER.info("Got chat message '{}'", event.getMessage());
         }
-      }
-      if (b instanceof ChestBlockEntity cbe) {
-        var textcomp = cbe.getCustomName();
-        if (textcomp != null) {
-          String thestring = textcomp.getString();
-          LOGGER.info("INTERACTED WITH CHEST BLOCK - '{}'", thestring);
-          if (thestring.startsWith("decoy")) {
-            Level world = event.getLevel();
-            // Remove chest from position
-            // world.removeBlockEntity(bp); // makes an empty default chest for some reason
-            world.setBlock(bp, Blocks.AIR.defaultBlockState(), Block.getId(Blocks.AIR.defaultBlockState())); // breaks the chest
 
-            // Spawn creeper
-            Creeper creeper = new Creeper(EntityType.CREEPER, event.getLevel());
-            creeper.setPos(event.getPos().getX(), event.getPos().getY(), event.getPos().getZ());
-            // CompoundTag nbt = creeper.serializeNBT();
-            // nbt.putBoolean("powered", true);
-            // creeper.deserializeNBT(nbt);
+        // @SubscribeEvent
+        // public static void onKeyPressEvent(InputEvent.KeyInputEvent event) {
+        //     LOGGER.info("pressed '{} - {}'", event.getKey(), event.getAction());
+        //     if (event.getKey() == 71 && event.getAction() == 0) {
+        //         // pressed g
+        //         var instance = Minecraft.getInstance();
+        //         var x = instance.player.getX();
+        //         var y = instance.player.getY();
+        //         var z = instance.player.getZ();
+        //         Creeper creeper = new Creeper(EntityType.CREEPER, instance.world);
+
+        //         LOGGER.info("spawning creeper at {}, {}, {}", x+1, y+1, z+1);
+
+        //         // var creeper = ;
+        //         // SpawnEntity()
+        //     }
+        // }
+    }
+
+
+    @Mod.EventBusSubscriber(modid = "tangia", bus = Bus.FORGE)
+    public static class MyStaticServerOnlyEventHandler {
+        @SubscribeEvent
+        public static void onInteractBlockEvent(PlayerInteractEvent.RightClickBlock event) {
+            //LOGGER.info("Got block interaction event '{}'", event.toString());
+        }
+
+        @SubscribeEvent
+        public static void onInteractEmptyEvent(PlayerInteractEvent.RightClickEmpty event) {
+            //LOGGER.info("Got empty interaction event '{}'", event.toString());
+        }
+
+        @SubscribeEvent
+        public static void onInteractEvent(PlayerInteractEvent.RightClickItem event) {
+            //LOGGER.info("Got interaction event '{}'", event.toString());
+            //LOGGER.info("Got interaction item '{}'", event.getItemStack());
+            var gameId = System.getenv("DEBUG");
+            if (gameId == null) {
+                return;
+            }
+
+            // Spawn live TNT above someone's head
+            // Play a delayed sound
+            var exece = new ScheduledThreadPoolExecutor(1);
+            var level = event.getLevel();
+            var player = event.getEntity();
+            exece.schedule(() -> {
+                var liveTNT = new PrimedTnt(level, event.getEntity().getX(), event.getEntity().getY() + 5, event.getEntity().getZ(), null);
+                liveTNT.setFuse(30);
+                level.addFreshEntity(liveTNT);
+            }, 1, TimeUnit.SECONDS);
+            exece.schedule(() -> {
+                var liveTNT = new PrimedTnt(level, event.getEntity().getX(), event.getEntity().getY() + 5, event.getEntity().getZ(), null);
+                liveTNT.setFuse(30);
+                level.addFreshEntity(liveTNT);
+            }, 2, TimeUnit.SECONDS);
+            exece.schedule(() -> {
+                var liveTNT = new PrimedTnt(level, event.getEntity().getX(), event.getEntity().getY() + 5, event.getEntity().getZ(), null);
+                liveTNT.setFuse(30);
+                level.addFreshEntity(liveTNT);
+            }, 3, TimeUnit.SECONDS);
+
+            Creeper creeper = new Creeper(EntityType.CREEPER, level);
+            creeper.setPos(player.getX(), player.getY(), player.getZ());
+            CompoundTag nbt = creeper.serializeNBT();
+            nbt.putBoolean("powered", true);
+            creeper.deserializeNBT(nbt);
+            creeper.setNoAi(true);
             creeper.setCustomNameVisible(true);
-            var name = MutableComponent.create(new LiteralContents(thestring.substring(5)));
+            var name = MutableComponent.create(new LiteralContents("edrique"));
             creeper.setCustomName(name);
-            world.addFreshEntity(creeper);
-          }
+            creeper.addTag("test tag");
+            // LightningBolt lb = new LightningBolt(EntityType.LIGHTNING_BOLT, world);
+            // lb.setPos(player.getX(), player.getY(), player.getZ());
+            level.addFreshEntity(creeper);
+
+            // add item to inventory
+            Item item = Items.TOTEM_OF_UNDYING;
+
+            ItemStack totem = new ItemStack(item, 1);
+            totem.setHoverName(name);
+
+            ItemStack sword = new ItemStack(Items.NETHERITE_HOE, 1);
+            sword.enchant(Enchantments.SHARPNESS, 5);
+            sword.setHoverName(name);
+            player.getInventory().add(totem);
+            player.getInventory().add(sword);
+
+            var kelp = new ItemStack(Items.DRIED_KELP_BLOCK, 1);
+            kelp.setHoverName(MutableComponent.create(new LiteralContents("kit - hehe")));
+            player.getInventory().add(kelp);
+
+            BlockPos bp = new BlockPos((int) player.getX(), (int) player.getY(), (int) (player.getZ() + 1));
+            level.setBlockAndUpdate(bp, Blocks.CHEST.defaultBlockState());
+            ChestBlockEntity cbe = new ChestBlockEntity(bp, Blocks.CHEST.defaultBlockState());
+            cbe.setCustomName(MutableComponent.create(new LiteralContents("pepechest")));
+            for (int slot = 0; slot < 5; slot++) {
+                Item iteme = Items.TOTEM_OF_UNDYING;
+                ItemStack toteme = new ItemStack(iteme, 1);
+                toteme.setHoverName(MutableComponent.create(new LiteralContents("hehe")));
+                cbe.setItem(slot, toteme);
+            }
+            level.setBlockEntity(cbe);
+            // world.addFreshEntity(lb);
+
+            // spawn lightning where player is looking
+            // LightningBolt entityToSpawn = EntityType.LIGHTNING_BOLT.create(world);
+            // entityToSpawn.moveTo(Vec3.atBottomCenterOf(new BlockPos(
+            // 		player.world.clip(new ClipContext(player.getEyePosition(1f), player.getEyePosition(1f).add(player.getViewVector(1f).scale(100)),
+            // 				ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player)).getBlockPos().getX(),
+            // 		player.world.clip(new ClipContext(player.getEyePosition(1f), player.getEyePosition(1f).add(player.getViewVector(1f).scale(100)),
+            // 				ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player)).getBlockPos().getY(),
+            // 		player.world.clip(new ClipContext(player.getEyePosition(1f), player.getEyePosition(1f).add(player.getViewVector(1f).scale(100)),
+            // 				ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player)).getBlockPos().getZ())));
+            // entityToSpawn.setVisualOnly(false);
+            // world.addFreshEntity(entityToSpawn);
+
+            // spawn ghast where player is looking
+            // Ghast entityToSpawn = EntityType.GHAST.create(world);
+            Entity entityToSpawn = ForgeRegistries.ENTITY_TYPES.getValue(new ResourceLocation("donkey")).create(level);
+            entityToSpawn.moveTo(Vec3.atBottomCenterOf(new BlockPos(
+                    level.clip(new ClipContext(player.getEyePosition(1f), player.getEyePosition(1f).add(player.getViewVector(1f).scale(100)),
+                            ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player)).getBlockPos().getX(),
+                    level.clip(new ClipContext(player.getEyePosition(1f), player.getEyePosition(1f).add(player.getViewVector(1f).scale(100)),
+                            ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player)).getBlockPos().getY(),
+                    level.clip(new ClipContext(player.getEyePosition(1f), player.getEyePosition(1f).add(player.getViewVector(1f).scale(100)),
+                            ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player)).getBlockPos().getZ())));
+            if (entityToSpawn instanceof Mob mob) {
+                mob.setNoAi(true);
+                level.addFreshEntity(mob);
+            }
+
+
+            // apply a status effect
+            MobEffectInstance mei = new MobEffectInstance(ForgeRegistries.MOB_EFFECTS.getValue(new ResourceLocation("strength")), 200);
+            // MobEffectInstance mei = new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100);
+            player.addEffect(mei);
+            // player.getName().getContents();
+
+            player.sendSystemMessage(MutableComponent.create(new LiteralContents("personal message")));
+
+
+            // drop an item
+            ItemStack mossyblock = new ItemStack(ForgeRegistries.ITEMS.getValue(new ResourceLocation("minecraft:mossy_stone_brick_stairs")), 1);
+            mossyblock.enchant(ForgeRegistries.ENCHANTMENTS.getValue(new ResourceLocation("protection")), 3);
+            ItemEntity itement = new ItemEntity(level, player.getX(), player.getY(), player.getZ(), mossyblock);
+            level.addFreshEntity(itement);
+
+            String testobj = "{\"chestName\":\"hello\",\"items\":[{\"itemID\":\"hey\"}]}";
+
+            Gson gson = new Gson();
+            ChestComponent actualObj = gson.fromJson(testobj, ChestComponent.class);
+            LOGGER.info("actual obj - {}", gson.toJson(actualObj));
+
+            // play a sound
+            level.playSound(player, event.getPos(), ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("entity.lightning_bolt.thunder")), SoundSource.AMBIENT, 1f, 1f);
+            level.playSound(player, event.getPos(), ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("entity.lightning_bolt.impact")), SoundSource.AMBIENT, 1f, 1f);
+
+            // Play a delayed sound
+            ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(1);
+            exec.schedule(() -> {
+                level.playSound(player, event.getPos(), ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("entity.creeper.primed")), SoundSource.AMBIENT, 1f, 1f);
+                level.playSound(player, event.getPos(), ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("entity.creeper.primed")), SoundSource.AMBIENT, 1f, 1f);
+            }, 1, TimeUnit.SECONDS);
         }
-      }
-    }
-  }
 
-  public static class CommandAckWaiter {
-    private final InteractionEvent interaction;
-    private final TangiaSDK sdk;
-    private final List<CommandComponent> cmds = new LinkedList<>();
+        @SubscribeEvent
+        public static void onMobDrops(LivingDropsEvent event) {
+            LOGGER.info("------ GOT LIVING DROP EVENT");
+            Entity entity = event.getEntity();
+            LOGGER.info("GOT TAGS {}", entity.getTags());
+        }
 
-    public CommandAckWaiter(InteractionEvent interaction, TangiaSDK sdk) {
-      this.interaction = interaction;
-      this.sdk = sdk;
+        @SubscribeEvent
+        public static void onLeverEvent(PlayerInteractEvent.RightClickBlock event) {
+            BlockPos bp = event.getPos();
+            var blockState = event.getLevel().getBlockState(bp);
+            LOGGER.info("Interacted with block - {}", blockState.getBlock().getName());
+            BlockEntity b = event.getLevel().getBlockEntity(bp);
+            if (b instanceof ShulkerBoxBlockEntity sbe) {
+                var textcomp = sbe.getCustomName();
+                if (textcomp != null) {
+                    String thestring = textcomp.getString();
+                    LOGGER.info("INTERACTED WITH SHULKER BLOCK - '{}'", thestring);
+                }
+            }
+            if (b instanceof ChestBlockEntity cbe) {
+                var textcomp = cbe.getCustomName();
+                if (textcomp != null) {
+                    String thestring = textcomp.getString();
+                    LOGGER.info("INTERACTED WITH CHEST BLOCK - '{}'", thestring);
+                    if (thestring.startsWith("decoy")) {
+                        Level world = event.getLevel();
+                        // Remove chest from position
+                        // world.removeBlockEntity(bp); // makes an empty default chest for some reason
+                        world.setBlock(bp, Blocks.AIR.defaultBlockState(), Block.getId(Blocks.AIR.defaultBlockState())); // breaks the chest
+
+                        // Spawn creeper
+                        Creeper creeper = new Creeper(EntityType.CREEPER, event.getLevel());
+                        creeper.setPos(event.getPos().getX(), event.getPos().getY(), event.getPos().getZ());
+                        // CompoundTag nbt = creeper.serializeNBT();
+                        // nbt.putBoolean("powered", true);
+                        // creeper.deserializeNBT(nbt);
+                        creeper.setCustomNameVisible(true);
+                        var name = MutableComponent.create(new LiteralContents(thestring.substring(5)));
+                        creeper.setCustomName(name);
+                        world.addFreshEntity(creeper);
+                    }
+                }
+            }
+        }
     }
 
-    public void add(CommandComponent cmd) {
-      cmds.add(cmd);
-    }
+    public static class CommandAckWaiter {
+        private final InteractionEvent interaction;
+        private final TangiaSDK sdk;
+        private final List<CommandComponent> cmds = new LinkedList<>();
 
-    public void ack(CommandComponent cmd) {
-      // ack when the last one gets removed
-      if (cmds.remove(cmd) && cmds.size() == 0) {
-        sdk.ackEventAsync(new EventResult(interaction.EventID, true, null));
-      }
-    }
+        public CommandAckWaiter(InteractionEvent interaction, TangiaSDK sdk) {
+            this.interaction = interaction;
+            this.sdk = sdk;
+        }
 
-    public void fail(CommandComponent cmd) {
-      // don't double-nack
-      if (!cmds.remove(cmd)) {
-        return;
-      }
-      cmds.clear();
-      sdk.ackEventAsync(new EventResult(interaction.EventID, false, "command failed"));
+        public void add(CommandComponent cmd) {
+            cmds.add(cmd);
+        }
+
+        public void ack(CommandComponent cmd) {
+            // ack when the last one gets removed
+            if (cmds.remove(cmd) && cmds.size() == 0) {
+                sdk.ackEventAsync(new EventResult(interaction.EventID, true, null));
+            }
+        }
+
+        public void fail(CommandComponent cmd) {
+            // don't double-nack
+            if (!cmds.remove(cmd)) {
+                return;
+            }
+            cmds.clear();
+            sdk.ackEventAsync(new EventResult(interaction.EventID, false, "command failed"));
+        }
     }
-  }
 }
