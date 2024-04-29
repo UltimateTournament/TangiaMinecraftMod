@@ -47,7 +47,7 @@ public class ModPersistence {
                 data.setSessions(new HashMap<>());
             }
         } catch (IOException e) {
-            LOGGER.warn("couldn't load data", e);
+            LOGGER.warn("couldn't load data, this is normal on first start", e);
         }
     }
 }
