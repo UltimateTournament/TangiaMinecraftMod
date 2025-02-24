@@ -1,17 +1,14 @@
 package co.tangia.minecraftmod;
 
-import com.mojang.brigadier.ParseResults;
 import com.mojang.logging.LogUtils;
-import net.minecraft.client.Minecraft;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.contents.LiteralContents;
-import net.minecraft.server.MinecraftServer;
+import net.minecraft.network.chat.contents.PlainTextContents;
 import net.minecraft.world.phys.Vec2;
 import net.minecraftforge.client.ClientCommandHandler;
-import net.minecraftforge.client.ClientCommandSourceStack;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -27,6 +24,7 @@ public class CommandComponent implements CommandSource {
     public String displayName;
     public int delayTicks;
   }
+
   public String command;
   public String playerName;
   public String displayName;
@@ -34,6 +32,7 @@ public class CommandComponent implements CommandSource {
 
   private final long startTick;
   private boolean stopListening;
+  private int failures;
   private final TangiaMod.CommandAckWaiter ackWaiter;
   private final UUID playerUUID;
   private static final Logger LOGGER = LogUtils.getLogger();
@@ -77,8 +76,10 @@ public class CommandComponent implements CommandSource {
     var server = event.player.level().getServer();
     boolean cmdSuccess;
     if (server != null) {
-      var stack = new CommandSourceStack(this, event.player.position(), Vec2.ZERO, server.getLevel(event.player.level().dimension()), 4, "Server", MutableComponent.create(new LiteralContents("Server")), server, null);
-      cmdSuccess = server.getCommands().performPrefixedCommand(stack, this.getMessage()) > 0;
+      var stack = new CommandSourceStack(this, event.player.position(), Vec2.ZERO, server.getLevel(event.player.level().dimension()), 4, "Server", MutableComponent.create(new PlainTextContents.LiteralContents("Server")), server, null);
+      var failuresBefore = this.failures;
+      server.getCommands().performPrefixedCommand(stack, this.getMessage());
+      cmdSuccess = (this.failures == failuresBefore);
     } else {
       cmdSuccess = ClientCommandHandler.runCommand(this.getMessage());
     }
@@ -94,6 +95,12 @@ public class CommandComponent implements CommandSource {
 
   @Override
   public void sendSystemMessage(Component c) {
+    // we don't get failures returned anymore, so we can only rely on counting error messages ^^
+    if (c.getStyle().getColor() != null && c.getStyle().getColor().getValue() == ChatFormatting.RED.getColor()) {
+      this.failures++;
+      LOGGER.error("command got error message: {}", c.getString());
+      return;
+    }
     LOGGER.info("command got message: {}", c.getString());
   }
 

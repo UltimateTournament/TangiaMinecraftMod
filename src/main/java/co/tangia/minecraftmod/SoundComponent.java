@@ -50,7 +50,7 @@ public class SoundComponent {
             return;
         }
         BlockPos bp = new BlockPos((int) player.getX(), (int) player.getY(), (int) player.getZ());
-        player.level().playSound(null, bp, ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(this.soundID)), SoundSource.AMBIENT, 1f, 1f);
+        player.level().playSound(null, bp, ForgeRegistries.SOUND_EVENTS.getValue(ResourceLocation.parse(this.soundID)), SoundSource.AMBIENT, 1f, 1f);
         this.stopListening = true;
     }
 }
