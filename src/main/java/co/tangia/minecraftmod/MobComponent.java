@@ -4,11 +4,9 @@ import java.util.Map;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.contents.PlainTextContents;
+import net.minecraft.network.chat.contents.LiteralContents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -39,39 +37,37 @@ public class MobComponent {
   }
 
   public Mob getMob(Level level, String displayName) {
-    var lookupProvider = level.registryAccess();
-    var entityType = ForgeRegistries.ENTITY_TYPES.getValue(ResourceLocation.parse(this.entityID));
-    Entity entity = entityType.create(level, EntitySpawnReason.MOB_SUMMONED);
+    Entity entity = ForgeRegistries.ENTITY_TYPES.getValue(new ResourceLocation(this.entityID)).create(level);
     if (entity instanceof Mob mob) {
       // Apply nbts
       if (this.nbtStrings != null) {
         for(Map.Entry<String,String> entry: this.nbtStrings.entrySet()) {
-          CompoundTag nbt = mob.serializeNBT(lookupProvider);
+          CompoundTag nbt = mob.serializeNBT();
           nbt.putString(entry.getKey(), entry.getValue());
-          mob.deserializeNBT(lookupProvider, nbt);
+          mob.deserializeNBT(nbt);
         }
       }
       if (this.nbtBools != null) {
         for(Map.Entry<String,Boolean> entry: this.nbtBools.entrySet()) {
-          CompoundTag nbt = mob.serializeNBT(lookupProvider);
+          CompoundTag nbt = mob.serializeNBT();
           nbt.putBoolean(entry.getKey(), entry.getValue());
-          mob.deserializeNBT(lookupProvider, nbt);
+          mob.deserializeNBT(nbt);
         }
       }
       if (this.nbtInts != null) {
         for(Map.Entry<String, Integer> entry: this.nbtInts.entrySet()) {
-          CompoundTag nbt = mob.serializeNBT(lookupProvider);
+          CompoundTag nbt = mob.serializeNBT();
           nbt.putInt(entry.getKey(), entry.getValue());
-          mob.deserializeNBT(lookupProvider, nbt);
+          mob.deserializeNBT(nbt);
         }
       }
   
-      if (this.customName != null && !this.customName.isEmpty()) {
+      if (this.customName != null && this.customName != "") {
         mob.setCustomNameVisible(true);
         if (displayName != null) {
-          mob.setCustomName(MutableComponent.create(new PlainTextContents.LiteralContents(this.customName.replaceAll("\\$DISPLAYNAME", displayName))));
+          mob.setCustomName(MutableComponent.create(new LiteralContents(this.customName.replaceAll("\\$DISPLAYNAME", displayName))));
         } else {
-          mob.setCustomName(MutableComponent.create(new PlainTextContents.LiteralContents(this.customName)));
+          mob.setCustomName(MutableComponent.create(new LiteralContents(this.customName)));
         }
       }
   

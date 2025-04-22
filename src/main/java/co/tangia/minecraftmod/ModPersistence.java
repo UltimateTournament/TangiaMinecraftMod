@@ -6,7 +6,6 @@ import com.google.gson.ReflectionAccessFilter;
 import com.mojang.logging.LogUtils;
 import org.slf4j.Logger;
 
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -47,8 +46,6 @@ public class ModPersistence {
             if (data.sessions() == null) {
                 data.setSessions(new HashMap<>());
             }
-        } catch (FileNotFoundException e) {
-            LOGGER.info("no data to load - starting with clean state");
         } catch (IOException e) {
             LOGGER.warn("couldn't load data, this is normal on first start", e);
         }

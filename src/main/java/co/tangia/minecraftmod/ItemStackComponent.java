@@ -1,13 +1,11 @@
 package co.tangia.minecraftmod;
 
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.contents.PlainTextContents;
+import net.minecraft.network.chat.contents.LiteralContents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.Map;
@@ -24,7 +22,6 @@ public class ItemStackComponent {
     public Map<String, String> nbtStrings;
     public Map<String, Integer> nbtInts;
   }
-
   public String itemID;
   public int stackSize;
   public EnchantmentComponent[] enchantments;
@@ -47,44 +44,52 @@ public class ItemStackComponent {
     this.nbtInts = data.nbtInts;
   }
 
-  public ItemStack getItemStack(String displayName, HolderLookup.Provider lookupProvider) {
-    var item = ForgeRegistries.ITEMS.getValue(ResourceLocation.parse(this.itemID));
-    var itemTag = new CompoundTag();
-    var itemStack = new ItemStack(item, this.stackSize);
+  public ItemStack getItemStack(String displayName) {
+    ItemStack is = new ItemStack(ForgeRegistries.ITEMS.getValue(new ResourceLocation(this.itemID)), this.stackSize);
     if (this.enchantments != null) {
       for (EnchantmentComponent enchantment : this.enchantments) {
-        var ench = enchantment.getEnchantment(lookupProvider);
+        Enchantment ench = enchantment.getEnchantment();
         if (ench != null) {
-          itemStack.enchant(ench, enchantment.level);
+          is.enchant(ench, enchantment.level);
         }
       }
     }
     // Apply nbts
     if (this.nbtStrings != null) {
-      for (Map.Entry<String, String> entry : this.nbtStrings.entrySet()) {
-        itemTag.putString(entry.getKey(), entry.getValue());
+      for(Map.Entry<String,String> entry: this.nbtStrings.entrySet()) {
+        var tag = is.getTag();
+        if (tag == null) {
+          tag = new CompoundTag();
+        }
+        tag.putString(entry.getKey(), entry.getValue());
+        is.setTag(tag);
       }
     }
     if (this.nbtBools != null) {
-      for (Map.Entry<String, Boolean> entry : this.nbtBools.entrySet()) {
-        itemTag.putBoolean(entry.getKey(), entry.getValue());
+      for(Map.Entry<String,Boolean> entry: this.nbtBools.entrySet()) {
+          var tag = is.getTag();
+          if (tag == null) {
+            tag = new CompoundTag();
+          }
+          tag.putBoolean(entry.getKey(), entry.getValue());
+          is.setTag(tag);
       }
     }
     if (this.nbtInts != null) {
-      for (Map.Entry<String, Integer> entry : this.nbtInts.entrySet()) {
-        itemTag.putInt(entry.getKey(), entry.getValue());
-      }
+      for(Map.Entry<String, Integer> entry: this.nbtInts.entrySet()) {
+          var tag = is.getTag();
+          if (tag == null) {
+            tag = new CompoundTag();
+          }
+          tag.putInt(entry.getKey(), entry.getValue());
+          is.setTag(tag);
+        }
     }
-    // could also be ENTITY_DATA
-    itemStack.set(DataComponents.CUSTOM_DATA, CustomData.of(itemTag));
-    if (this.hoverName != null) {
-      var name = this.hoverName;
-      if (displayName != null) {
-        name = name.replaceAll("\\$DISPLAYNAME", displayName);
-      }
-      itemStack.set(DataComponents.CUSTOM_NAME, MutableComponent.create(new PlainTextContents.LiteralContents(name)));
+    if (this.hoverName != null && displayName != null) {
+      is.setHoverName(MutableComponent.create(new LiteralContents(this.hoverName.replaceAll("\\$DISPLAYNAME", displayName))));
+    } else if (this.hoverName != null) {
+      is.setHoverName(MutableComponent.create(new LiteralContents(this.hoverName)));
     }
-    return itemStack;
+    return is;
   }
-
 }

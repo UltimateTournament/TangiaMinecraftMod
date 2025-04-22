@@ -9,7 +9,7 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.contents.PlainTextContents;
+import net.minecraft.network.chat.contents.LiteralContents;
 import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
 
@@ -42,11 +42,11 @@ public class LoginCommand {
         try {
             player = ctx.getSource().getPlayerOrException();
             mod.login(player, StringArgumentType.getString(ctx, codeArg));
-            player.displayClientMessage(MutableComponent.create(new PlainTextContents.LiteralContents("You're logged in now")), true);
+            player.sendSystemMessage(MutableComponent.create(new LiteralContents("You're logged in now")));
         } catch (Exception ex) {
             LOGGER.warn("failed to login", ex);
             if (player != null) {
-                player.displayClientMessage(MutableComponent.create(new PlainTextContents.LiteralContents("We couldn't log you in")), true);
+                player.sendSystemMessage(MutableComponent.create(new LiteralContents("We couldn't log you in")));
             }
             return 0;
         }
